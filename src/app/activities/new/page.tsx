@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
@@ -8,24 +8,13 @@ import { Button } from "../../components/ui/Button";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-type ClientOption = {
-  id: string;
-  name: string;
-};
-
-export default function NewActivityPage() {
-  const router = useRouter();
+// The actual form that uses useSearchParams
+function NewActivityPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const clientIdFromQuery = searchParams.get("clientId") ?? "";
 
-  // client selection
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(true);
-  const [clientsError, setClientsError] = useState<string | null>(null);
-  const [clientSearch, setClientSearch] = useState("");
   const [clientId, setClientId] = useState(clientIdFromQuery);
-
-  // activity fields
   const [date, setDate] = useState(""); // yyyy-mm-dd
   const [startTime, setStartTime] = useState(""); // HH:mm
   const [durationHours, setDurationHours] = useState("1");
@@ -36,52 +25,6 @@ export default function NewActivityPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔹 Fetch clients for dropdown
-  useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      setClientsError("You are not logged in. Please log in again.");
-      setClientsLoading(false);
-      return;
-    }
-
-    async function fetchClients() {
-      try {
-        setClientsLoading(true);
-        setClientsError(null);
-
-        const res = await fetch(`${API_BASE_URL}/api/clients`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          setClientsError(data.error || "Failed to load clients.");
-          setClientsLoading(false);
-          return;
-        }
-
-        const mapped: ClientOption[] = (data as any[]).map((c) => ({
-          id: c.id,
-          name: c.name ?? "Unnamed client",
-        }));
-
-        setClients(mapped);
-        setClientsLoading(false);
-      } catch (err: any) {
-        console.error("Error loading clients for activity form", err);
-        setClientsError("Could not load clients.");
-        setClientsLoading(false);
-      }
-    }
-
-    fetchClients();
-  }, []);
-
-  // 🔹 Helper to compute times
   function computeTimes() {
     if (!date || !startTime) return { startTimeIso: null, endTimeIso: null };
 
@@ -114,7 +57,7 @@ export default function NewActivityPage() {
     }
 
     if (!clientId.trim()) {
-      setError("Please select a client.");
+      setError("Please enter a client ID.");
       return;
     }
 
@@ -163,7 +106,7 @@ export default function NewActivityPage() {
         return;
       }
 
-      // success → back to activities (preserve client filter if present)
+      // success – go back to activities (preserve client filter if present)
       if (clientIdFromQuery) {
         router.push(`/activities?clientId=${clientIdFromQuery}`);
       } else {
@@ -175,14 +118,6 @@ export default function NewActivityPage() {
       setSaving(false);
     }
   }
-
-  // 🔹 Filter clients by search text
-  const filteredClients =
-    clientSearch.trim().length === 0
-      ? clients
-      : clients.filter((c) =>
-          c.name.toLowerCase().includes(clientSearch.toLowerCase())
-        );
 
   return (
     <ProtectedLayout>
@@ -197,6 +132,12 @@ export default function NewActivityPage() {
               Log a new activity / visit for a client. This will be used for
               billing and time tracking.
             </p>
+            {clientIdFromQuery && (
+              <p className="text-xs text-slate-500 mt-1">
+                Pre-filling for client ID:{" "}
+                <span className="font-mono">{clientIdFromQuery}</span>
+              </p>
+            )}
           </div>
 
           <Button
@@ -217,46 +158,22 @@ export default function NewActivityPage() {
               </div>
             )}
 
-            {/* Client selector */}
+            {/* Client ID */}
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-700">
-                Client
+                Client ID
               </label>
-
-              {clientsLoading ? (
-                <p className="text-xs text-slate-500">Loading clients…</p>
-              ) : clientsError ? (
-                <p className="text-xs text-red-600">{clientsError}</p>
-              ) : (
-                <>
-                  {/* Search box */}
-                  <input
-                    type="text"
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    placeholder="Search client by name…"
-                    className="mb-2 w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-
-                  {/* Dropdown */}
-                  <select
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a client…</option>
-                    {filteredClients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Start typing to filter the list, then choose a client.
-                  </p>
-                </>
-              )}
+              <input
+                type="text"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Paste client ID here"
+              />
+              <p className="text-[11px] text-slate-500">
+                In a later phase we’ll turn this into a searchable client
+                dropdown.
+              </p>
             </div>
 
             {/* Date & time */}
@@ -367,5 +284,20 @@ export default function NewActivityPage() {
         </section>
       </div>
     </ProtectedLayout>
+  );
+}
+
+// Default export wraps content in Suspense to satisfy Next.js
+export default function NewActivityPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-4 text-sm text-slate-500">
+          Loading new activity form…
+        </div>
+      }
+    >
+      <NewActivityPageContent />
+    </Suspense>
   );
 }
