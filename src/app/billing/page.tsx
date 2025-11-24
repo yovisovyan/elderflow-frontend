@@ -2,7 +2,7 @@
 
 import ProtectedLayout from "../protected-layout";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const API_BASE_URL =
@@ -18,10 +18,15 @@ type Invoice = {
   client?: { id?: string; name?: string };
 };
 
-export default function BillingPage() {
+type BillingPageProps = {
+  searchParams: {
+    clientId?: string;
+  };
+};
+
+export default function BillingPage({ searchParams }: BillingPageProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const clientIdFilter = searchParams.get("clientId");
+  const clientIdFilter = searchParams.clientId ?? null;
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +101,7 @@ export default function BillingPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || "Failed to load invoices.");
+          setError((data as any).error || "Failed to load invoices.");
           setLoading(false);
           return;
         }
@@ -304,9 +309,21 @@ export default function BillingPage() {
                 Invoice status breakdown
               </p>
               <div className="space-y-2 text-sm">
-                <StatusRow label="Draft" count={summary.draftCount} tone="default" />
-                <StatusRow label="Sent" count={summary.sentCount} tone="info" />
-                <StatusRow label="Paid" count={summary.paidCount} tone="success" />
+                <StatusRow
+                  label="Draft"
+                  count={summary.draftCount}
+                  tone="default"
+                />
+                <StatusRow
+                  label="Sent"
+                  count={summary.sentCount}
+                  tone="info"
+                />
+                <StatusRow
+                  label="Paid"
+                  count={summary.paidCount}
+                  tone="success"
+                />
                 <StatusRow
                   label="Overdue"
                   count={summary.overdueCount}
@@ -340,7 +357,10 @@ export default function BillingPage() {
             </p>
             <ul className="divide-y divide-slate-100 text-sm">
               {summary.topClients.map((c) => (
-                <li key={c.name} className="flex items-center justify-between py-2">
+                <li
+                  key={c.name}
+                  className="flex items-center justify-between py-2"
+                >
                   <span className="text-slate-800">{c.name}</span>
                   <span className="text-sm font-semibold text-slate-900">
                     ${c.amount.toFixed(2)}
@@ -453,7 +473,9 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
   }
 
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${pillClass}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${pillClass}`}
+    >
       {normalized.toUpperCase()}
     </span>
   );

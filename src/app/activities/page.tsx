@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ProtectedLayout from "../protected-layout";
 import { Button } from "../components/ui/Button";
 
@@ -21,10 +21,15 @@ type Activity = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-export default function ActivitiesPage() {
-  const searchParams = useSearchParams();
+type ActivitiesPageProps = {
+  searchParams: {
+    clientId?: string;
+  };
+};
+
+export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
   const router = useRouter();
-  const clientIdFilter = searchParams.get("clientId");
+  const clientIdFilter = searchParams.clientId ?? null;
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +61,7 @@ export default function ActivitiesPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || "Failed to load activities.");
+          setError((data as any).error || "Failed to load activities.");
           setLoading(false);
           return;
         }
@@ -205,7 +210,7 @@ export default function ActivitiesPage() {
                     <th className="border-b border-slate-200 px-3 py-2">
                       Hours
                     </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
+                    <th className="border-b border-sale-200 px-3 py-2">
                       Source
                     </th>
                     <th className="border-b border-slate-200 px-3 py-2">

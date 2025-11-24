@@ -1,18 +1,22 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-// The actual form that uses useSearchParams
-function NewActivityPageContent() {
-  const searchParams = useSearchParams();
+type NewActivityPageProps = {
+  searchParams: {
+    clientId?: string;
+  };
+};
+
+export default function NewActivityPage({ searchParams }: NewActivityPageProps) {
   const router = useRouter();
-  const clientIdFromQuery = searchParams.get("clientId") ?? "";
+  const clientIdFromQuery = searchParams.clientId ?? "";
 
   const [clientId, setClientId] = useState(clientIdFromQuery);
   const [date, setDate] = useState(""); // yyyy-mm-dd
@@ -284,20 +288,5 @@ function NewActivityPageContent() {
         </section>
       </div>
     </ProtectedLayout>
-  );
-}
-
-// Default export wraps content in Suspense to satisfy Next.js
-export default function NewActivityPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="p-4 text-sm text-slate-500">
-          Loading new activity form…
-        </div>
-      }
-    >
-      <NewActivityPageContent />
-    </Suspense>
   );
 }
