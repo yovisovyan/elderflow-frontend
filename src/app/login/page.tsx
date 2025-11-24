@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("demo+admin@elderflow.ai");
   const [password, setPassword] = useState("Password123!");
@@ -12,7 +15,7 @@ export default function LoginPage() {
     setMessage("Logging in...");
 
     try {
-      const res = await fetch("http://localhost:4000/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -40,29 +43,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
+    <div className="flex h-screen items-center justify-center bg-gray-100">
       <form
         onSubmit={handleLogin}
-        className="bg-white p-8 shadow-md rounded-md w-96 space-y-4"
+        className="w-96 space-y-4 rounded-md bg-white p-8 shadow-md"
       >
         <h1 className="text-2xl font-bold">ElderFlow Login</h1>
 
         <input
-          className="w-full border p-2 rounded"
+          className="w-full rounded border p-2"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
-          className="w-full border p-2 rounded"
+          className="w-full rounded border p-2"
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="w-full p-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <button className="w-full rounded bg-blue-600 p-2 text-white hover:bg-blue-700">
           Log In
         </button>
 
