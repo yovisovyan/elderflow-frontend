@@ -30,11 +30,9 @@ export default function LoginPage() {
         return;
       }
 
-      // store token + user in sessionStorage for now
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
-      // go to dashboard
       window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
