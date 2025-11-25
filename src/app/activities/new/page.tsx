@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
@@ -8,17 +8,37 @@ import { Button } from "../../components/ui/Button";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-type NewActivityPageProps = {
-  searchParams: {
-    clientId?: string;
-  };
+type ServiceType = {
+  id: string;
+  name: string;
+  billingCode?: string | null;
+  rateType: "hourly" | "flat";
+  rateAmount: number;
 };
 
-export default function NewActivityPage({ searchParams }: NewActivityPageProps) {
+type ClientOption = {
+  id: string;
+  name: string;
+};
+
+export default function NewActivityPage({
+  searchParams,
+}: {
+  searchParams: { clientId?: string };
+}) {
   const router = useRouter();
   const clientIdFromQuery = searchParams.clientId ?? "";
 
-  const [clientId, setClientId] = useState(clientIdFromQuery);
+  // client selection
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientsError, setClientsError] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<string>(
+    clientIdFromQuery
+  );
+
+  // time/activity fields
   const [date, setDate] = useState(""); // yyyy-mm-dd
   const [startTime, setStartTime] = useState(""); // HH:mm
   const [durationHours, setDurationHours] = useState("1");
@@ -26,11 +46,20 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
   const [source, setSource] = useState("manual");
   const [isBillable, setIsBillable] = useState(true);
 
+  // service types from backend
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [serviceTypesLoading, setServiceTypesLoading] = useState(true);
+  const [serviceTypesError, setServiceTypesError] = useState<string | null>(
+    null
+  );
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function computeTimes() {
-    if (!date || !startTime) return { startTimeIso: null, endTimeIso: null };
+    if (!date || !startTime)
+      return { startTimeIso: null, endTimeIso: null, durationMinutes: 0 };
 
     const [hourStr, minuteStr] = startTime.split(":");
     const hours = parseInt(hourStr || "0", 10);
@@ -51,6 +80,130 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
     };
   }
 
+  // Load clients for dropdown
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("token")
+        : null;
+
+    if (!token) {
+      setClientsError("You are not logged in. Please log in again.");
+      setClientsLoading(false);
+      return;
+    }
+
+    async function fetchClients() {
+      try {
+        setClientsLoading(true);
+        setClientsError(null);
+
+        const res = await fetch(`${API_BASE_URL}/api/clients`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setClientsError(
+            (data && (data.error || data.message)) ||
+              "Failed to load clients."
+          );
+          setClientsLoading(false);
+          return;
+        }
+
+        const list: ClientOption[] = (data as any[]).map((c) => ({
+          id: c.id,
+          name: c.name,
+        }));
+
+        setClients(list);
+
+        // If there is a clientId in the query, pre-select it if present
+        if (clientIdFromQuery) {
+          const exists = list.some((c) => c.id === clientIdFromQuery);
+          if (exists) {
+            setSelectedClientId(clientIdFromQuery);
+          }
+        }
+
+        setClientsLoading(false);
+      } catch (err) {
+        console.error("Error loading clients:", err);
+        setClientsError("Could not load clients.");
+        setClientsLoading(false);
+      }
+    }
+
+    fetchClients();
+  }, [clientIdFromQuery]);
+
+  // Load service types from backend
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("token")
+        : null;
+
+    if (!token) {
+      setServiceTypesError("You are not logged in. Please log in again.");
+      setServiceTypesLoading(false);
+      return;
+    }
+
+    async function fetchServiceTypes() {
+      try {
+        setServiceTypesLoading(true);
+        setServiceTypesError(null);
+
+        const res = await fetch(`${API_BASE_URL}/api/service-types`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setServiceTypesError(
+            (data && (data.error || data.message)) ||
+              "Failed to load service types."
+          );
+          setServiceTypesLoading(false);
+          return;
+        }
+
+        const incoming: ServiceType[] =
+          data.services?.map((svc: any) => ({
+            id: svc.id,
+            name: svc.name,
+            billingCode: svc.billingCode ?? null,
+            rateType:
+              svc.rateType === "flat"
+                ? ("flat" as const)
+                : ("hourly" as const),
+            rateAmount: svc.rateAmount ?? 0,
+          })) ?? [];
+
+        setServiceTypes(incoming);
+        setServiceTypesLoading(false);
+      } catch (err) {
+        console.error("Error loading service types:", err);
+        setServiceTypesError("Could not load service types.");
+        setServiceTypesLoading(false);
+      }
+    }
+
+    fetchServiceTypes();
+  }, []);
+
+  const filteredClients = clients.filter((c) =>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())
+  );
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -60,8 +213,8 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
       return;
     }
 
-    if (!clientId.trim()) {
-      setError("Please enter a client ID.");
+    if (!selectedClientId) {
+      setError("Please select a client.");
       return;
     }
 
@@ -87,7 +240,7 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          clientId: clientId.trim(),
+          clientId: selectedClientId,
           startTime: startTimeIso,
           endTime: endTimeIso,
           duration: durationMinutes,
@@ -95,6 +248,7 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
           source: source || "manual",
           isBillable,
           isFlagged: false,
+          serviceTypeId: selectedServiceId || null,
         }),
       });
 
@@ -136,12 +290,6 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
               Log a new activity / visit for a client. This will be used for
               billing and time tracking.
             </p>
-            {clientIdFromQuery && (
-              <p className="text-xs text-slate-500 mt-1">
-                Pre-filling for client ID:{" "}
-                <span className="font-mono">{clientIdFromQuery}</span>
-              </p>
-            )}
           </div>
 
           <Button
@@ -162,22 +310,83 @@ export default function NewActivityPage({ searchParams }: NewActivityPageProps) 
               </div>
             )}
 
-            {/* Client ID */}
+            {/* Client selection (searchable dropdown) */}
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-700">
-                Client ID
+                Client
               </label>
-              <input
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Paste client ID here"
-              />
-              <p className="text-[11px] text-slate-500">
-                In a later phase we’ll turn this into a searchable client
-                dropdown.
-              </p>
+              {clientsLoading ? (
+                <p className="text-[11px] text-slate-500">
+                  Loading clients…
+                </p>
+              ) : clientsError ? (
+                <p className="text-[11px] text-red-600">{clientsError}</p>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search client by name…"
+                  />
+                  <select
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a client…</option>
+                    {filteredClients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    Start typing to filter your client list, then choose the
+                    correct client. In a future phase, this can become a
+                    full searchable combo box.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Service type */}
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-700">
+                Service (optional)
+              </label>
+              {serviceTypesLoading ? (
+                <p className="text-[11px] text-slate-500">
+                  Loading service types…
+                </p>
+              ) : serviceTypesError ? (
+                <p className="text-[11px] text-red-600">
+                  {serviceTypesError}
+                </p>
+              ) : (
+                <>
+                  <select
+                    value={selectedServiceId}
+                    onChange={(e) => setSelectedServiceId(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a service…</option>
+                    {serviceTypes.map((svc) => (
+                      <option key={svc.id} value={svc.id}>
+                        {svc.name}{" "}
+                        {svc.rateType === "hourly"
+                          ? `– $${svc.rateAmount}/hr`
+                          : `– $${svc.rateAmount} flat`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    Care managers usually pick a service here instead of
+                    manually remembering rates or codes.
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Date & time */}
