@@ -8,7 +8,7 @@ type ProtectedLayoutProps = {
   children: React.ReactNode;
 };
 
-const navItems = [
+const baseNavItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/activities", label: "Activities" },
@@ -18,7 +18,6 @@ const navItems = [
   // invoices really lives under /dashboard/invoices in your app
   { href: "/dashboard/invoices", label: "Invoices" },
 ];
-
 
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const router = useRouter();
@@ -62,6 +61,16 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       </div>
     );
   }
+
+  const isAdmin = userRole === "admin";
+
+  // Build nav items dynamically so admins see the Team link
+  const navItems = isAdmin
+    ? [
+        ...baseNavItems,
+        { href: "/users/new", label: "Team" }, // admin-only link
+      ]
+    : baseNavItems;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
