@@ -35,6 +35,20 @@ const initialServices: ServiceType[] = [
   },
 ];
 
+// Suggest a billing code from a service name
+function suggestBillingCode(name: string): string {
+  if (!name.trim()) return "";
+  // turn "Care Management – Standard" into "CARE-MANAGEMENT-STANDARD"
+  const cleaned = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "") // strip accents
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-") // non-alphanum -> dash
+    .replace(/^-+|-+$/g, "") // trim dashes
+    .slice(0, 24); // keep it reasonably short
+  return cleaned || "";
+}
+
 export default function BillingRatesPage() {
   const [services, setServices] = useState<ServiceType[]>(initialServices);
   const [saving, setSaving] = useState(false);
@@ -46,19 +60,29 @@ export default function BillingRatesPage() {
     value: string
   ) {
     setServices((prev) =>
-      prev.map((svc) =>
-        svc.id === id
-          ? {
-              ...svc,
-              [field]:
-                field === "rateAmount"
-                  ? Number(value) || 0
-                  : field === "rateType"
-                  ? (value as "hourly" | "flat")
-                  : value,
-            }
-          : svc
-      )
+      prev.map((svc) => {
+        if (svc.id !== id) return svc;
+
+        let updated: ServiceType = {
+          ...svc,
+          [field]:
+            field === "rateAmount"
+              ? Number(value) || 0
+              : field === "rateType"
+              ? (value as "hourly" | "flat")
+              : value,
+        };
+
+        // If name is being edited and billingCode is empty, auto-suggest one
+        if (field === "name" && !svc.billingCode) {
+          const suggested = suggestBillingCode(value);
+          if (suggested) {
+            updated.billingCode = suggested;
+          }
+        }
+
+        return updated;
+      })
     );
   }
 
@@ -91,81 +115,121 @@ export default function BillingRatesPage() {
 
   return (
     <ProtectedLayout>
-      <div className="space-y-6 max-w-4xl">
+      <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold">Service Types &amp; Rates</h1>
-          <p className="text-sm text-slate-600">
-            Define the services you offer and how they are billed. These rates
-            will be used when generating invoices.
-          </p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+                $
+              </span>
+              <span>Service Types &amp; Rates</span>
+            </div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Define how you bill for services
+            </h1>
+            <p className="text-sm text-slate-600">
+              Set the standard services you offer and how they are billed. These
+              will be used as building blocks when generating invoices.
+            </p>
+          </div>
+
+          <div className="text-xs text-slate-500">
+            <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="font-medium text-slate-700">Admin only</span>
+            </div>
+          </div>
         </div>
 
         {/* Info note */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700">
-          <p className="font-medium mb-1">How this works</p>
-          <ul className="list-disc list-inside space-y-1">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 shadow-sm md:px-5">
+          <p className="mb-2 text-sm font-semibold text-slate-900">
+            How this works
+          </p>
+          <ul className="list-disc list-inside space-y-1.5 text-xs md:text-sm">
             <li>
-              <strong>Hourly</strong> services are billed by time (e.g., $150 per hour).
+              <span className="font-semibold">Hourly</span> services are billed
+              by time (for example, <span className="font-mono">$150/hr</span>).
             </li>
             <li>
-              <strong>Flat</strong> services are a single fee (e.g., $350 per
-              assessment).
+              <span className="font-semibold">Flat</span> services are a single
+              fee (for example,
+              <span className="font-mono"> $350</span> per assessment).
             </li>
             <li>
-              Later we’ll connect this to your actual invoicing backend.
+              Billing codes are <span className="font-semibold">optional</span> and
+              mainly used for exports or payor systems. Care managers will pick
+              services by name — they never have to remember the codes.
             </li>
           </ul>
-        </div>
+        </section>
 
         {/* Form */}
         <form onSubmit={handleSave} className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-lg divide-y">
-            {services.map((svc) => (
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {services.map((svc, index) => (
               <div
                 key={svc.id}
-                className="p-4 grid grid-cols-1 md:grid-cols-4 gap-3"
+                className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)_minmax(0,1.2fr)] md:px-5 md:py-4 border-b last:border-b-0 border-slate-100"
               >
+                {/* Row label on left for context (mobile) */}
+                <div className="md:col-span-3 flex items-center justify-between pb-1 md:hidden">
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Service {index + 1}
+                  </span>
+                </div>
+
                 {/* Service Name */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Service Name
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Service name
                   </label>
                   <input
                     type="text"
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     value={svc.name}
                     onChange={(e) =>
                       handleChange(svc.id, "name", e.target.value)
                     }
                     placeholder="e.g., Ongoing Care Management"
                   />
+                  <p className="text-[11px] text-slate-400">
+                    How this appears on invoices and internal lists.
+                  </p>
                 </div>
 
                 {/* Billing Code */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Billing Code
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Billing code{" "}
+                    <span className="font-normal text-slate-400">
+                      (optional)
+                    </span>
                   </label>
                   <input
                     type="text"
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     value={svc.billingCode}
                     onChange={(e) =>
                       handleChange(svc.id, "billingCode", e.target.value)
                     }
                     placeholder="e.g., CM-STD"
                   />
+                  <p className="text-[11px] text-slate-400">
+                    Leave blank and we&apos;ll suggest a code from the service
+                    name. Care managers will select services by name, not code.
+                  </p>
                 </div>
 
                 {/* Rate Type + Amount */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-slate-600">
                     Rate
                   </label>
                   <div className="flex gap-2">
                     <select
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                       value={svc.rateType}
                       onChange={(e) =>
                         handleChange(svc.id, "rateType", e.target.value)
@@ -174,25 +238,36 @@ export default function BillingRatesPage() {
                       <option value="hourly">Hourly</option>
                       <option value="flat">Flat</option>
                     </select>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                      value={svc.rateAmount}
-                      onChange={(e) =>
-                        handleChange(svc.id, "rateAmount", e.target.value)
-                      }
-                      min={0}
-                      step={1}
-                      placeholder="Amount"
-                    />
+                    <div className="flex flex-1 items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm">
+                      <span className="text-xs text-slate-500">$</span>
+                      <input
+                        type="number"
+                        className="w-full bg-transparent text-sm outline-none"
+                        value={svc.rateAmount}
+                        onChange={(e) =>
+                          handleChange(svc.id, "rateAmount", e.target.value)
+                        }
+                        min={0}
+                        step={1}
+                        placeholder="Amount"
+                      />
+                      <span className="text-[11px] text-slate-400">
+                        {svc.rateType === "hourly" ? "/ hr" : "flat"}
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-[11px] text-slate-400">
+                    {svc.rateType === "hourly"
+                      ? "Used when billing by tracked time."
+                      : "Used as a one-time fee for this service."}
+                  </p>
                 </div>
               </div>
             ))}
-          </div>
+          </section>
 
           {/* Actions */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <button
               type="button"
               onClick={handleAddNew}
@@ -203,14 +278,14 @@ export default function BillingRatesPage() {
 
             <div className="flex items-center gap-3">
               {message && (
-                <span className="text-xs text-green-600">{message}</span>
+                <span className="text-xs text-emerald-600">{message}</span>
               )}
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
               >
-                {saving ? "Saving..." : "Save changes"}
+                {saving ? "Saving…" : "Save changes"}
               </button>
             </div>
           </div>
