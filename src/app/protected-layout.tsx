@@ -32,7 +32,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     if (!token) {
       router.replace("/login");
       return;
-    */
+    }
 
     const userJson = sessionStorage.getItem("user");
     if (userJson) {
