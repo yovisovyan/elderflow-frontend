@@ -33,14 +33,12 @@ type CmActivity = {
   serviceType?: { name?: string | null } | null;
 };
 
-
 export default function TeamMemberPage() {
   const router = useRouter();
   const pathname = usePathname();
 
   // Extract /team/<userId>
-  const userId =
-    pathname?.split("/").filter(Boolean).slice(-1)[0] ?? "";
+  const userId = pathname?.split("/").filter(Boolean).slice(-1)[0] ?? "";
 
   const [user, setUser] = useState<BillingUser | null>(null);
   const [clients, setClients] = useState<BillingClient[]>([]);
@@ -62,6 +60,8 @@ export default function TeamMemberPage() {
   const [phoneInput, setPhoneInput] = useState("");
   const [profileImageUrlInput, setProfileImageUrlInput] = useState("");
 
+  const [recentActivities, setRecentActivities] = useState<CmActivity[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [savingAssignments, setSavingAssignments] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -69,6 +69,15 @@ export default function TeamMemberPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Helper: initials
+  function initials(name: string | undefined | null) {
+    if (!name) return "CM";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? "";
+    const second = parts[1]?.[0] ?? "";
+    return (first + second).toUpperCase();
+  }
 
   useEffect(() => {
     const token =
@@ -110,17 +119,21 @@ export default function TeamMemberPage() {
         setLoading(true);
         setError(null);
 
-        const [summaryRes, clientsRes] = await Promise.all([
+        const [summaryRes, clientsRes, recentRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/users/${userId}/summary`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API_BASE_URL}/api/clients`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          fetch(`${API_BASE_URL}/api/users/${userId}/recent-activities`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         const summaryData = await summaryRes.json();
         const clientsData = await clientsRes.json();
+        const recentData = await recentRes.json();
 
         if (!summaryRes.ok) {
           setError(
@@ -147,7 +160,14 @@ export default function TeamMemberPage() {
         setPhoneInput(u.phone || "");
         setProfileImageUrlInput(u.profileImageUrl || "");
 
-        const all: BillingClient[] = (clientsData as any[]).map((c) => ({
+        // clientsData should be an array
+        const allArray: any[] = Array.isArray(clientsData)
+          ? clientsData
+          : Array.isArray(clientsData?.clients)
+          ? clientsData.clients
+          : [];
+
+        const all: BillingClient[] = allArray.map((c) => ({
           id: c.id,
           name: c.name,
           status: c.status,
@@ -155,6 +175,18 @@ export default function TeamMemberPage() {
 
         setAllClients(all);
         setSelectedClientIds(assigned.map((c) => c.id));
+
+        // recent activities
+        if (
+          recentRes.ok &&
+          recentData &&
+          Array.isArray(recentData.recentActivities)
+        ) {
+          setRecentActivities(recentData.recentActivities);
+        } else {
+          setRecentActivities([]);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Error loading CM user summary:", err);
@@ -165,14 +197,6 @@ export default function TeamMemberPage() {
 
     fetchData();
   }, [userId, pathname]);
-
-  function initials(name: string) {
-    if (!name) return "CM";
-    const parts = name.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? "";
-    const second = parts[1]?.[0] ?? "";
-    return (first + second).toUpperCase();
-  }
 
   function toggleClientSelection(id: string) {
     setSelectedClientIds((prev) =>
@@ -632,6 +656,60 @@ export default function TeamMemberPage() {
             {success && (
               <p className="text-xs text-emerald-600">{success}</p>
             )}
+
+            {/* Recent activity timeline */}
+            <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Recent activity
+              </h2>
+              <p className="text-xs text-slate-500">
+                Latest logged activities for this care manager.
+              </p>
+
+              {recentActivities.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  No recent activities found for this care manager.
+                </p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {recentActivities.map((a) => {
+                    const dateStr = a.startTime.slice(0, 10);
+                    const hours = (a.duration || 0) / 60;
+                    const serviceName =
+                      a.serviceType?.name ?? "Care Management Services";
+
+                    return (
+                      <li
+                        key={a.id}
+                        className="flex items-start gap-2 rounded-md bg-slate-50 px-3 py-2"
+                      >
+                        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-medium text-slate-500">
+                              {dateStr}
+                            </span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-sm font-medium text-slate-900">
+                              {hours.toFixed(2)}h
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {serviceName}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600">
+                            {a.isBillable ? "Billable" : "Non-billable"}
+                            {a.client?.name
+                              ? ` · Client: ${a.client.name}`
+                              : ""}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           </>
         )}
 
