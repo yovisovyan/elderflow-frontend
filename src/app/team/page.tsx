@@ -15,13 +15,25 @@ type CmUser = {
   role: string;
   clientsCount: number;
   createdAt: string;
+  profileImageUrl?: string | null;
+  title?: string | null;
+};
+
+type CmMetrics = {
+  last30Hours: number;
+  billableHours: number;
+  billableRatio: number; // 0–1
 };
 
 export default function TeamPage() {
   const router = useRouter();
 
   const [users, setUsers] = useState<CmUser[]>([]);
+  const [metricsByUser, setMetricsByUser] = useState<
+    Record<string, CmMetrics>
+  >({});
   const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,8 +53,8 @@ export default function TeamPage() {
     }
 
     try {
-      const user = JSON.parse(userJson);
-      if (user.role !== "admin") {
+      const current = JSON.parse(userJson);
+      if (current.role !== "admin") {
         setError("Only admins can manage the care team.");
         setLoading(false);
         return;
@@ -53,11 +65,12 @@ export default function TeamPage() {
       return;
     }
 
-    async function fetchUsers() {
+    async function fetchUsersAndMetrics() {
       try {
         setLoading(true);
         setError(null);
 
+        // 1) Fetch CMs
         const res = await fetch(
           `${API_BASE_URL}/api/users?role=care_manager`,
           {
@@ -78,8 +91,56 @@ export default function TeamPage() {
           return;
         }
 
-        setUsers(data.users || []);
+        const list: CmUser[] = data.users || [];
+        setUsers(list);
         setLoading(false);
+
+        // 2) Fetch metrics for each CM
+        if (list.length > 0) {
+          setMetricsLoading(true);
+          const metrics: Record<string, CmMetrics> = {};
+
+          await Promise.all(
+            list.map(async (u) => {
+              try {
+                const mRes = await fetch(
+                  `${API_BASE_URL}/api/users/${u.id}/metrics`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                );
+                const mData = await mRes.json();
+                if (mRes.ok) {
+                  metrics[u.id] = {
+                    last30Hours:
+                      mData.last30Days?.hours != null
+                        ? Number(mData.last30Days.hours)
+                        : 0,
+                    billableHours:
+                      mData.last30Days?.billableHours != null
+                        ? Number(mData.last30Days.billableHours)
+                        : 0,
+                    billableRatio:
+                      mData.last30Days?.billableRatio != null
+                        ? Number(mData.last30Days.billableRatio)
+                        : 0,
+                  };
+                }
+              } catch (err) {
+                console.error(
+                  "Error fetching metrics for user",
+                  u.id,
+                  err
+                );
+              }
+            })
+          );
+
+          setMetricsByUser(metrics);
+          setMetricsLoading(false);
+        }
       } catch (err) {
         console.error("Error loading team:", err);
         setError("Could not load team.");
@@ -87,7 +148,7 @@ export default function TeamPage() {
       }
     }
 
-    fetchUsers();
+    fetchUsersAndMetrics();
   }, []);
 
   function initials(name: string) {
@@ -96,6 +157,11 @@ export default function TeamPage() {
     const first = parts[0]?.[0] ?? "";
     const second = parts[1]?.[0] ?? "";
     return (first + second).toUpperCase();
+  }
+
+  function formatRatio(ratio: number) {
+    if (!ratio || ratio <= 0) return "0% billable";
+    return `${Math.round(ratio * 100)}% billable`;
   }
 
   return (
@@ -113,8 +179,8 @@ export default function TeamPage() {
               Manage care managers
             </h1>
             <p className="text-sm text-slate-600">
-              View your care managers, see how many clients they support, and
-              manage assignments.
+              See who&apos;s on your team, how many clients they support, and
+              their recent workload.
             </p>
           </div>
 
@@ -152,8 +218,8 @@ export default function TeamPage() {
                     <th className="border-b border-slate-200 px-4 py-3 text-left">
                       Email
                     </th>
-                    <th className="border-b border-slate-200 px-4 py-3 text-right">
-                      Clients
+                    <th className="border-b border-slate-200 px-4 py-3 text-left">
+                      Workload
                     </th>
                     <th className="border-b border-slate-200 px-4 py-3 text-right">
                       Actions
@@ -161,40 +227,71 @@ export default function TeamPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="border-b border-slate-100 hover:bg-slate-50"
-                    >
-                      <td className="px-4 py-3 text-sm text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                            {initials(u.name)}
+                  {users.map((u) => {
+                    const m = metricsByUser[u.id];
+                    const last30Hours = m?.last30Hours ?? 0;
+                    const clientsCount = u.clientsCount ?? 0;
+                    const billableRatio = m?.billableRatio ?? 0;
+
+                    return (
+                      <tr
+                        key={u.id}
+                        className="border-b border-slate-100 hover:bg-slate-50"
+                      >
+                        <td className="px-4 py-3 text-sm text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white overflow-hidden">
+                              {u.profileImageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={u.profileImageUrl}
+                                  alt={u.name}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                initials(u.name)
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span>{u.name}</span>
+                              <span className="text-[11px] text-slate-500">
+                                Care manager
+                                {u.title ? ` · ${u.title}` : ""}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col">
-                            <span>{u.name}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {u.email}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">
+                          <div className="flex flex-col gap-1">
                             <span className="text-[11px] text-slate-500">
-                              Care manager
+                              {clientsCount} clients ·{" "}
+                              {metricsLoading && !m
+                                ? "…"
+                                : `${last30Hours.toFixed(
+                                    1
+                                  )} hrs (last 30 days)`}
+                            </span>
+                            <span className="inline-flex w-fit items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                              {metricsLoading && !m
+                                ? "Loading billable ratio…"
+                                : formatRatio(billableRatio)}
                             </span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {u.email}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm text-slate-700">
-                        {u.clientsCount}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm">
-                        <Link
-                          href={`/team/${u.id}`}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          Manage
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm">
+                          <Link
+                            href={`/team/${u.id}`}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                          >
+                            Manage
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
