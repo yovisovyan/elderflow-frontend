@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-type CmUser = {
+type BillingUser = {
   id: string;
   name: string;
   email: string;
@@ -15,25 +15,25 @@ type CmUser = {
   createdAt: string;
 };
 
-type Client = {
+type BillingClient = {
   id: string;
   name: string;
   status?: string;
 };
 
-export default function TeamMemberPage({
-  params,
-}: {
-  params: { userId: string };
-}) {
-  const { userId } = params;
+export default function TeamMemberPage() {
   const router = useRouter();
+  const pathname = usePathname();
 
-  const [user, setUser] = useState<CmUser | null>(null);
-  const [assignedClients, setAssignedClients] = useState<Client[]>([]);
-  const [allClients, setAllClients] = useState<Client[]>([]);
+  // Extract userId from /team/<userId>
+  const userId =
+    pathname?.split("/").filter(Boolean).slice(-1)[0] ?? "";
 
+  const [user, setUser] = useState<BillingUser | null>(null);
+  const [clients, setClients] = useState<BillingClient[]>([]);
+  const [allClients, setAllClients] = useState<BillingClient[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +68,12 @@ export default function TeamMemberPage({
       return;
     }
 
+    if (!userId) {
+      setError("Missing care manager id in the URL.");
+      setLoading(false);
+      return;
+    }
+
     async function fetchData() {
       try {
         setLoading(true);
@@ -98,44 +104,52 @@ export default function TeamMemberPage({
           return;
         }
 
-        setUser(summaryData.user as CmUser);
-        setAssignedClients(summaryData.clients || []);
+        const u = summaryData.user as BillingUser;
+        const assigned = (summaryData.clients || []) as BillingClient[];
 
-        const all = (clientsData as any[]).map((c) => ({
+        setUser(u);
+        setClients(assigned);
+
+        const all: BillingClient[] = (clientsData as any[]).map((c) => ({
           id: c.id,
-          name: c.name as string,
-          status: c.status as string | undefined,
+          name: c.name,
+          status: c.status,
         }));
+
         setAllClients(all);
-
-        setSelectedClientIds(
-          (summaryData.clients || []).map((c: Client) => c.id)
-        );
-
+        setSelectedClientIds(assigned.map((c) => c.id));
         setLoading(false);
       } catch (err) {
-        console.error("Error loading team member:", err);
+        console.error("Error loading CM user summary:", err);
         setError("Could not load care manager.");
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [userId]);
+  }, [userId, pathname]);
 
-  function toggleClient(id: string) {
+  function initials(name: string) {
+    if (!name) return "CM";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? "";
+    const second = parts[1]?.[0] ?? "";
+    return (first + second).toUpperCase();
+  }
+
+  function toggleClientSelection(id: string) {
     setSelectedClientIds((prev) =>
       prev.includes(id)
-        ? prev.filter((c) => c !== id)
+        ? prev.filter((cid) => cid !== id)
         : [...prev, id]
     );
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
     setSuccess(null);
+    setSaving(true);
 
     const token =
       typeof window !== "undefined"
@@ -144,6 +158,12 @@ export default function TeamMemberPage({
 
     if (!token) {
       setError("You are not logged in.");
+      setSaving(false);
+      return;
+    }
+
+    if (!userId) {
+      setError("Missing care manager id.");
       setSaving(false);
       return;
     }
@@ -166,46 +186,47 @@ export default function TeamMemberPage({
       if (!res.ok) {
         setError(
           (data && (data.error || data.message)) ||
-            "Failed to update client assignments."
+            "Failed to save client assignments."
         );
         setSaving(false);
         return;
       }
 
-      setAssignedClients(data.clients || []);
+      const updatedClients: BillingClient[] = data.clients || [];
+      setClients(updatedClients);
+      setSelectedClientIds(updatedClients.map((c) => c.id));
       setSuccess("Client assignments updated.");
       setSaving(false);
     } catch (err: any) {
-      console.error("Error saving assignments:", err);
+      console.error("Error saving client assignments:", err);
       setError(err.message ?? "Something went wrong.");
       setSaving(false);
     }
   }
 
-  function initials(name: string) {
-    if (!name) return "CM";
-    const parts = name.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? "";
-    const second = parts[1]?.[0] ?? "";
-    return (first + second).toUpperCase();
-  }
-
   return (
     <ProtectedLayout>
-      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-        {/* Header */}
+      <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-              {user ? initials(user.name) : "CM"}
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+                👤
+              </span>
+              <span>Care Manager</span>
             </div>
-            <div className="space-y-0.5">
-              <h1 className="text-xl font-semibold text-slate-900">
-                {user?.name || "Care Manager"}
-              </h1>
-              <p className="text-xs text-slate-500">
-                {user?.email} · {user?.role}
-              </p>
+            <div className="mt-1 flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                {initials(user?.name || "")}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">
+                  {user?.name || "Loading…"}
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  {user?.email}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -228,104 +249,68 @@ export default function TeamMemberPage({
         )}
 
         {!loading && !error && user && (
-          <div className="grid gap-4 md:grid-cols-[1.4fr_2fr]">
-            {/* Profile summary */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Overview
-              </h2>
-              <p className="text-xs text-slate-600">
-                Manage which clients this care manager is responsible for.
-              </p>
-              <div className="mt-2 space-y-1 text-xs text-slate-600">
-                <p>
-                  <span className="font-semibold">Name:</span> {user.name}
-                </p>
-                <p>
-                  <span className="font-semibold">Email:</span> {user.email}
-                </p>
-                <p>
-                  <span className="font-semibold">Role:</span>{" "}
-                  {user.role}
-                </p>
-                <p>
-                  <span className="font-semibold">Assigned clients:</span>{" "}
-                  {assignedClients.length}
-                </p>
-              </div>
-            </section>
+          <form
+            onSubmit={handleSave}
+            className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            <p className="text-sm font-semibold text-slate-900">
+              Assigned clients
+            </p>
+            <p className="text-xs text-slate-500">
+              Select the clients this care manager is responsible for. They will
+              only see these clients and their activities/billing.
+            </p>
 
-            {/* Client assignments */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    Client assignments
-                  </h2>
-                  <p className="text-xs text-slate-600">
-                    Select which clients this care manager should own. Clients
-                    not checked will be unassigned from this care manager.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSave} className="space-y-3">
-                <div className="max-h-72 overflow-y-auto rounded-md border border-slate-200 bg-slate-50/60">
-                  {allClients.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-slate-500">
-                      No clients found in this organization.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-slate-200 text-sm">
-                      {allClients.map((c) => (
-                        <li
-                          key={c.id}
-                          className="flex items-center justify-between px-3 py-2"
-                        >
-                          <label className="flex items-center gap-2 text-xs text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={selectedClientIds.includes(c.id)}
-                              onChange={() => toggleClient(c.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span>{c.name}</span>
-                          </label>
-                          {c.status && (
-                            <span className="text-[11px] text-slate-400">
-                              {c.status}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => router.push("/team")}
-                    className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                    disabled={saving}
+            <div className="mt-3 max-h-80 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
+              {allClients.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No clients found in this organization.
+                </p>
+              ) : (
+                allClients.map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-100"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
-                  >
-                    {saving ? "Saving…" : "Save assignments"}
-                  </button>
-                </div>
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedClientIds.includes(c.id)}
+                        onChange={() => toggleClientSelection(c.id)}
+                      />
+                      <span className="text-slate-800">{c.name}</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {c.status ?? ""}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
 
-                {success && (
-                  <p className="text-xs text-emerald-600">{success}</p>
-                )}
-              </form>
-            </section>
-          </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/team")}
+                className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
+              >
+                {saving ? "Saving…" : "Save assignments"}
+              </button>
+            </div>
+
+            {success && (
+              <p className="text-xs text-emerald-600">{success}</p>
+            )}
+          </form>
         )}
       </div>
     </ProtectedLayout>
