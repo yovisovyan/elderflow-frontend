@@ -32,7 +32,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     if (!token) {
       router.replace("/login");
       return;
-    }
+    */
 
     const userJson = sessionStorage.getItem("user");
     if (userJson) {
@@ -63,14 +63,29 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   }
 
   const isAdmin = userRole === "admin";
+  const isCareManager = userRole === "care_manager";
 
-  // Build nav items dynamically so admins see the Team link
-  const navItems = isAdmin
-    ? [
-        ...baseNavItems,
-        { href: "/users/new", label: "Team" }, // admin-only link
-      ]
-    : baseNavItems;
+  // Build nav items dynamically:
+  // - Admin: full nav + Team
+  // - Care manager: My Dashboard + core work pages
+  // - Fallback: base nav
+  let navItems: { href: string; label: string }[];
+
+  if (isAdmin) {
+    navItems = [
+      ...baseNavItems,
+      { href: "/users/new", label: "Team" }, // admin-only link
+    ];
+  } else if (isCareManager) {
+    navItems = [
+      { href: "/cm/dashboard", label: "My Dashboard" },
+      { href: "/clients", label: "Clients" },
+      { href: "/activities", label: "Activities" },
+      { href: "/billing", label: "Billing" },
+    ];
+  } else {
+    navItems = baseNavItems;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
