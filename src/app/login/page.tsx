@@ -38,8 +38,14 @@ export default function LoginPage() {
       }
 
       sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("user", JSON.stringify(data.user));
-      window.location.href = "/dashboard";
+sessionStorage.setItem("user", JSON.stringify(data.user));
+
+const role = data.user?.role;
+const target =
+  role === "care_manager" ? "/cm/dashboard" : "/dashboard";
+
+window.location.href = target;
+
     } catch (err) {
       console.error(err);
       setIsError(true);

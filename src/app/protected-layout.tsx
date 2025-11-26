@@ -73,9 +73,10 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   if (isAdmin) {
     navItems = [
-      ...baseNavItems,
-      { href: "/users/new", label: "Team" }, // admin-only link
-    ];
+  ...baseNavItems,
+  { href: "/team", label: "Team" }, // list page
+];
+
   } else if (isCareManager) {
     navItems = [
       { href: "/cm/dashboard", label: "My Dashboard" },
