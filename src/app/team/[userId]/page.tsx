@@ -24,6 +24,16 @@ type BillingClient = {
   status?: string;
 };
 
+type CmActivity = {
+  id: string;
+  startTime: string;
+  duration: number;
+  isBillable: boolean;
+  client?: { name?: string | null } | null;
+  serviceType?: { name?: string | null } | null;
+};
+
+
 export default function TeamMemberPage() {
   const router = useRouter();
   const pathname = usePathname();

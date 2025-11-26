@@ -19,6 +19,13 @@ type Client = {
   billingContactEmail?: string | null;
   billingContactPhone?: string | null;
   status?: ClientStatus;
+
+  // NEW: primaryCM returned by backend
+  primaryCM?: {
+    id: string;
+    name: string;
+    profileImageUrl?: string | null;
+  } | null;
 };
 
 export default function ClientsPage() {
@@ -28,7 +35,18 @@ export default function ClientsPage() {
   const [search, setSearch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
+  // NEW: check if admin to show CM links
+  const [isAdmin, setIsAdmin] = useState(false);
+
   useEffect(() => {
+    const userJson = sessionStorage.getItem("user");
+    if (userJson) {
+      try {
+        const u = JSON.parse(userJson);
+        setIsAdmin(u.role === "admin");
+      } catch {}
+    }
+
     const fetchClients = async () => {
       const token = sessionStorage.getItem("token");
 
@@ -43,7 +61,6 @@ export default function ClientsPage() {
         setError(null);
 
         const url = `${API_BASE_URL}/api/clients`;
-        console.log("🔍 Fetching clients from:", url);
 
         const res = await fetch(url, {
           headers: {
@@ -54,7 +71,6 @@ export default function ClientsPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          console.error("❌ Clients API error:", res.status, data);
           setError(data.error || "Failed to load clients.");
           setClients([]);
           setLoading(false);
@@ -64,7 +80,6 @@ export default function ClientsPage() {
         setClients(data ?? []);
         setLoading(false);
       } catch (err: any) {
-        console.error("❌ Network or code error loading clients:", err);
         setError(err.message ?? "Something went wrong loading clients.");
         setLoading(false);
       }
@@ -73,7 +88,7 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
-  // Filter by status + search (name or billing email)
+  // Filter logic (unchanged)
   const filteredClients = clients.filter((client) => {
     const matchesStatus =
       !statusFilter ||
@@ -89,11 +104,63 @@ export default function ClientsPage() {
     return matchesStatus && matchesSearch;
   });
 
+  // Helper: CM avatar initials
+  function initials(name: string | undefined | null) {
+    if (!name) return "CM";
+    const parts = name.trim().split(" ");
+    const first = parts[0]?.[0] ?? "";
+    const second = parts[1]?.[0] ?? "";
+    return (first + second).toUpperCase();
+  }
+
+  // UPDATED COLUMNS with CM avatar + link
   const columns = [
     {
       key: "name",
       header: "Client",
-      render: (c: Client) => c.name,
+      render: (c: Client) => {
+        const cm = c.primaryCM;
+
+        return (
+          <div className="flex items-center gap-3">
+            {/* CM Avatar if exists */}
+            {cm && (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white overflow-hidden">
+                {cm.profileImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cm.profileImageUrl}
+                    alt={cm.name}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  initials(cm.name)
+                )}
+              </div>
+            )}
+
+            {/* Client name + primary CM link (admin only) */}
+            <div className="flex flex-col">
+              <span className="font-medium">{c.name}</span>
+
+              {cm && isAdmin && (
+                <Link
+                  href={`/team/${cm.id}`}
+                  className="text-[11px] text-blue-600 hover:text-blue-700"
+                >
+                  Primary CM: {cm.name}
+                </Link>
+              )}
+
+              {cm && !isAdmin && (
+                <span className="text-[11px] text-gray-500">
+                  Primary CM: {cm.name}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "billingContactName",
@@ -135,7 +202,6 @@ export default function ClientsPage() {
   return (
     <ProtectedLayout>
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 lg:px-6">
-        {/* Header with New Client button */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
@@ -187,7 +253,7 @@ export default function ClientsPage() {
           </div>
         </section>
 
-        {/* Table / error */}
+        {/* Table */}
         <section>
           {error ? (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

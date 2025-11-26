@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 
@@ -17,6 +18,13 @@ type Client = {
   status: string;
   billingContactName?: string | null;
   billingContactEmail?: string | null;
+
+  // NEW: primaryCM, included by backend
+  primaryCM?: {
+    id: string;
+    name: string;
+    profileImageUrl?: string | null;
+  } | null;
 };
 
 type ActivityApi = {
@@ -25,6 +33,8 @@ type ActivityApi = {
   endTime: string;
   duration: number; // minutes
   notes?: string | null;
+  serviceType?: { name?: string | null } | null;
+  isBillable?: boolean;
 };
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | string;
@@ -55,6 +65,8 @@ export default function ClientDetailPage() {
   const [activities, setActivities] = useState<ActivityApi[]>([]);
   const [activitiesError, setActivitiesError] = useState<string | null>(null);
 
+  const [recentActivities, setRecentActivities] = useState<ActivityApi[]>([]);
+
   const [invoices, setInvoices] = useState<InvoiceApi[]>([]);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
 
@@ -65,7 +77,31 @@ export default function ClientDetailPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [noteMessage, setNoteMessage] = useState<string | null>(null);
 
-  // 1) Fetch client from backend (via list, then find by id)
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Helper: initials for avatars
+  function initials(name: string | undefined | null) {
+    if (!name) return "CM";
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? "";
+    const second = parts[1]?.[0] ?? "";
+    return (first + second).toUpperCase();
+  }
+
+  // Check role
+  useEffect(() => {
+    const userJson = sessionStorage.getItem("user");
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        setIsAdmin(user.role === "admin");
+      } catch {
+        setIsAdmin(false);
+      }
+    }
+  }, []);
+
+  // 1) Fetch client (now includes primaryCM)
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -95,14 +131,7 @@ export default function ClientDetailPage() {
         if (!found) {
           setClientError("Client not found.");
         } else {
-          const c: Client = {
-            id: found.id,
-            name: found.name,
-            status: found.status ?? "active",
-            billingContactName: found.billingContactName,
-            billingContactEmail: found.billingContactEmail,
-          };
-          setClient(c);
+          setClient(found as Client);
         }
       } catch (err) {
         console.error(err);
@@ -139,15 +168,25 @@ export default function ClientDetailPage() {
           return;
         }
 
-        setActivities(
-          (data as any[]).map((a) => ({
-            id: a.id,
-            startTime: a.startTime,
-            endTime: a.endTime,
-            duration: a.duration,
-            notes: a.notes,
-          }))
-        );
+        const mapped: ActivityApi[] = (data as any[]).map((a) => ({
+          id: a.id,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          duration: a.duration,
+          notes: a.notes,
+          serviceType: a.serviceType,
+          isBillable: a.isBillable,
+        }));
+
+        setActivities(mapped);
+
+        // Also compute recent timeline (top 10)
+        const recent = [...mapped]
+          .sort((a, b) =>
+            a.startTime < b.startTime ? 1 : -1
+          )
+          .slice(0, 10);
+        setRecentActivities(recent);
       } catch (err) {
         console.error(err);
         setActivitiesError("Could not load activities.");
@@ -336,7 +375,6 @@ export default function ClientDetailPage() {
 
   return (
     <ProtectedLayout>
-      {/* Page wrapper consistent with other screens */}
       <div className="mx-auto flex max-w-4xl flex-col space-y-6 px-4 py-6 lg:px-6">
         {/* Back link */}
         <button
@@ -359,7 +397,7 @@ export default function ClientDetailPage() {
         {/* Main content */}
         {!clientLoading && client && (
           <>
-            {/* Header with quick links */}
+            {/* Header */}
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <h1 className="text-3xl font-bold">{client.name}</h1>
@@ -413,6 +451,43 @@ export default function ClientDetailPage() {
               </div>
             </div>
 
+            {/* NEW: Primary CM card */}
+            {client.primaryCM && (
+              <Card title="Primary Care Manager">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white overflow-hidden">
+                    {client.primaryCM.profileImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={client.primaryCM.profileImageUrl}
+                        alt={client.primaryCM.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      initials(client.primaryCM.name)
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    {isAdmin ? (
+                      <Link
+                        href={`/team/${client.primaryCM.id}`}
+                        className="font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        {client.primaryCM.name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">
+                        {client.primaryCM.name}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-500">
+                      Primary Care Manager
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Summary cards */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card title="Hours Logged">
@@ -443,17 +518,16 @@ export default function ClientDetailPage() {
               </Card>
             </div>
 
-            {/* Info cards */}
+            {/* Billing contact + summary */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-             <Card title="Billing Contact">
-  <p className="mt-1 text-sm text-slate-800">
-    {client.billingContactName || "Not set"}
-  </p>
-  <p className="mt-1 text-xs text-slate-500">
-    {client.billingContactEmail || "No email on file"}
-  </p>
-</Card>
-
+              <Card title="Billing Contact">
+                <p className="mt-1 text-sm text-slate-800">
+                  {client.billingContactName || "Not set"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {client.billingContactEmail || "No email on file"}
+                </p>
+              </Card>
 
               <Card title="Summary">
                 <p className="mt-1 text-sm text-slate-700">
@@ -463,8 +537,60 @@ export default function ClientDetailPage() {
               </Card>
             </div>
 
-            {/* Recent Activities */}
-            <Card title="Recent Activities">
+            {/* NEW: Recent activity timeline for this client */}
+            <Card title="Recent Activity for This Client">
+              {activitiesError && (
+                <p className="text-xs text-red-600">{activitiesError}</p>
+              )}
+              {!activitiesError && recentActivities.length === 0 && (
+                <p className="text-xs text-slate-500">
+                  No recent activity for this client.
+                </p>
+              )}
+              {!activitiesError && recentActivities.length > 0 && (
+                <ul className="space-y-2 text-sm">
+                  {recentActivities.map((a) => {
+                    const dateStr = a.startTime.slice(0, 10);
+                    const hours = (a.duration || 0) / 60;
+                    const serviceName =
+                      a.serviceType?.name ?? "Care Management Services";
+                    return (
+                      <li
+                        key={a.id}
+                        className="flex items-start gap-2 rounded-md bg-slate-50 px-3 py-2"
+                      >
+                        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-medium text-slate-500">
+                              {dateStr}
+                            </span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-sm font-medium text-slate-900">
+                              {hours.toFixed(2)}h
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {serviceName}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600">
+                            {a.isBillable ? "Billable" : "Non-billable"}
+                            {a.notes
+                              ? ` · ${a.notes.slice(0, 80)}${
+                                  a.notes.length > 80 ? "…" : ""
+                                }`
+                              : ""}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+
+            {/* Recent Activities table (existing) */}
+            <Card title="Recent Activities (Table View)">
               {activitiesError && (
                 <p className="text-xs text-red-600">{activitiesError}</p>
               )}
@@ -539,7 +665,7 @@ export default function ClientDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {invoices.map((inv: InvoiceApi) => (
+                      {invoices.map((inv) => (
                         <tr key={inv.id} className="hover:bg-slate-50">
                           <td className="border-b border-slate-200 px-3 py-2">
                             {inv.id}
@@ -548,7 +674,7 @@ export default function ClientDetailPage() {
                             ${inv.totalAmount.toFixed(2)}
                           </td>
                           <td className="border-b border-slate-200 px-3 py-2">
-                            <StatusBadge status={inv.status} />
+                            <InvoiceStatusBadge status={inv.status} />
                           </td>
                           <td className="border-b border-slate-200 px-3 py-2">
                             {inv.periodEnd.slice(0, 10)}
@@ -608,7 +734,7 @@ export default function ClientDetailPage() {
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {notes.map((n: Note) => (
+                      {notes.map((n) => (
                         <div
                           key={n.id}
                           className="rounded-md border border-slate-200 p-3"
@@ -638,7 +764,7 @@ export default function ClientDetailPage() {
   );
 }
 
-function StatusBadge({ status }: { status: InvoiceStatus }) {
+function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   if (status === "paid") {
     return (
       <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
