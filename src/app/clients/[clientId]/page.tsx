@@ -19,7 +19,7 @@ type Client = {
   billingContactName?: string | null;
   billingContactEmail?: string | null;
 
-  // NEW: primaryCM, included by backend
+  // primaryCM included by backend
   primaryCM?: {
     id: string;
     name: string;
@@ -51,6 +51,7 @@ type Note = {
   content: string;
   createdAt: string;
   authorId: string;
+  authorName?: string | null;
 };
 
 export default function ClientDetailPage() {
@@ -78,6 +79,7 @@ export default function ClientDetailPage() {
   const [noteMessage, setNoteMessage] = useState<string | null>(null);
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCareManager, setIsCareManager] = useState(false);
 
   // Helper: initials for avatars
   function initials(name: string | undefined | null) {
@@ -88,20 +90,22 @@ export default function ClientDetailPage() {
     return (first + second).toUpperCase();
   }
 
-  // Check role
+  // Role check
   useEffect(() => {
     const userJson = sessionStorage.getItem("user");
     if (userJson) {
       try {
         const user = JSON.parse(userJson);
         setIsAdmin(user.role === "admin");
+        setIsCareManager(user.role === "care_manager");
       } catch {
         setIsAdmin(false);
+        setIsCareManager(false);
       }
     }
   }, []);
 
-  // 1) Fetch client (now includes primaryCM)
+  // 1) Fetch client (includes primaryCM)
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -180,11 +184,8 @@ export default function ClientDetailPage() {
 
         setActivities(mapped);
 
-        // Also compute recent timeline (top 10)
         const recent = [...mapped]
-          .sort((a, b) =>
-            a.startTime < b.startTime ? 1 : -1
-          )
+          .sort((a, b) => (a.startTime < b.startTime ? 1 : -1))
           .slice(0, 10);
         setRecentActivities(recent);
       } catch (err) {
@@ -269,8 +270,10 @@ export default function ClientDetailPage() {
             content: n.content,
             createdAt: n.createdAt,
             authorId: n.authorId,
+            authorName: n.authorName ?? null,
           }))
         );
+
         setNotesLoading(false);
       } catch (err) {
         console.error(err);
@@ -360,6 +363,7 @@ export default function ClientDetailPage() {
         content: data.content,
         createdAt: data.createdAt,
         authorId: data.authorId,
+        authorName: data.authorName ?? null,
       };
 
       setNotes((prev) => [newCreated, ...prev]);
@@ -370,6 +374,45 @@ export default function ClientDetailPage() {
       console.error(err);
       setNoteMessage("Something went wrong while creating the note.");
       setSavingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    if (!window.confirm("Delete this note? This cannot be undone.")) {
+      return;
+    }
+
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      setNoteMessage("You are not logged in. Please log in again.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/clients/${clientId}/notes/${noteId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Error deleting note:", data);
+        setNoteMessage(
+          data.error || "Failed to delete note. You may not have permission."
+        );
+        return;
+      }
+
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      setNoteMessage("Note deleted.");
+    } catch (err) {
+      console.error(err);
+      setNoteMessage("Something went wrong while deleting the note.");
     }
   }
 
@@ -451,7 +494,7 @@ export default function ClientDetailPage() {
               </div>
             </div>
 
-            {/* NEW: Primary CM card */}
+            {/* Primary CM card */}
             {client.primaryCM && (
               <Card title="Primary Care Manager">
                 <div className="flex items-center gap-3">
@@ -537,7 +580,7 @@ export default function ClientDetailPage() {
               </Card>
             </div>
 
-            {/* NEW: Recent activity timeline for this client */}
+            {/* Recent activity timeline */}
             <Card title="Recent Activity for This Client">
               {activitiesError && (
                 <p className="text-xs text-red-600">{activitiesError}</p>
@@ -589,7 +632,7 @@ export default function ClientDetailPage() {
               )}
             </Card>
 
-            {/* Recent Activities table (existing) */}
+            {/* Activities table */}
             <Card title="Recent Activities (Table View)">
               {activitiesError && (
                 <p className="text-xs text-red-600">{activitiesError}</p>
@@ -740,12 +783,29 @@ export default function ClientDetailPage() {
                           className="rounded-md border border-slate-200 p-3"
                         >
                           <div className="mb-1 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-slate-700">
-                              Note
-                            </span>
-                            <span className="text-[11px] text-slate-500">
-                              {new Date(n.createdAt).toLocaleString()}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-slate-700">
+                                Note
+                                {n.authorName && (
+                                  <span className="ml-1 text-[11px] font-normal text-slate-500">
+                                    · {n.authorName}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-[11px] text-slate-500">
+                                {new Date(n.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {(isAdmin || isCareManager) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteNote(n.id)}
+                                className="text-[11px] text-red-600 hover:text-red-700 hover:underline"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                           <p className="whitespace-pre-line text-sm text-slate-800">
                             {n.content}
