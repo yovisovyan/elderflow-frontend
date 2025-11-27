@@ -1,11 +1,15 @@
 import * as React from "react";
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
-
-export function Input({ className = "", ...props }: InputProps) {
+export function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`block w-full rounded-md border border-ef-border bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm outline-none focus:border-ef-primary focus:ring-2 focus:ring-ef-primary-soft ${className}`}
+      className={`
+        w-full rounded-xl border border-ef-border bg-white px-3 py-2 text-sm text-slate-900
+        shadow-sm transition-all
+        focus:border-ef-primary focus:ring-4 focus:ring-ef-primary-soft focus:bg-white
+        disabled:bg-slate-100 disabled:cursor-not-allowed
+        ${className}
+      `}
       {...props}
     />
   );

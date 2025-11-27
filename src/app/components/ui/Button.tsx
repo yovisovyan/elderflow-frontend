@@ -1,28 +1,22 @@
-"use client";
+import * as React from "react";
 
-import { ButtonHTMLAttributes, ReactNode } from "react";
-
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "outline";
-  children: ReactNode;
 };
 
-export function Button({
-  variant = "primary",
-  children,
-  className,
-  ...rest
-}: ButtonProps) {
+export function Button({ variant = "primary", className = "", ...props }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center rounded-md text-sm font-medium px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition";
+    "rounded-xl text-sm font-medium px-4 py-2 transition shadow-sm";
+
   const styles =
     variant === "primary"
-      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
-      : "border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 focus:ring-slate-400";
+      ? "bg-ef-primary text-white hover:bg-ef-primary-strong shadow-soft"
+      : "border border-ef-border bg-white text-slate-700 hover:bg-slate-50";
 
   return (
-    <button className={`${base} ${styles} ${className ?? ""}`} {...rest}>
-      {children}
-    </button>
+    <button
+      className={`${base} ${styles} ${className}`}
+      {...props}
+    />
   );
 }

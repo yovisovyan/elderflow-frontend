@@ -1,35 +1,14 @@
-"use client";
-
 import { ReactNode } from "react";
 
-type CardProps = {
-  title?: string;
-  description?: string;
-  children?: ReactNode;
-  className?: string;
-};
-
-export function Card({
-  title,
-  description,
-  children,
-  className,
-}: CardProps) {
+export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section
-      className={`bg-white border border-slate-200 rounded-xl shadow-sm p-4 ${className ?? ""}`}
+    <div
+      className={`
+        rounded-2xl bg-ef-surface border border-ef-border shadow-soft p-5
+        ${className}
+      `}
     >
-      {(title || description) && (
-        <header className="mb-3">
-          {title && (
-            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-          )}
-          {description && (
-            <p className="text-xs text-slate-500 mt-1">{description}</p>
-          )}
-        </header>
-      )}
       {children}
-    </section>
+    </div>
   );
 }
