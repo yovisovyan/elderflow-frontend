@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Textarea } from "../../components/ui/Textarea";
+import { Select } from "../../components/ui/Select";
+import { FormField } from "../../components/ui/FormField";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -279,97 +284,115 @@ export default function NewActivityPage({
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto flex max-w-5xl flex-col space-y-6 px-4 py-6 lg:px-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex items-center justify-between gap-3
+          "
+        >
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
               New Activity
             </h1>
-            <p className="text-sm text-slate-600">
-              Log a new activity / visit for a client. This will be used for
-              billing and time tracking.
+            <p className="text-sm opacity-90 mt-1">
+              Log a new activity / visit for a client for billing and time tracking.
             </p>
           </div>
 
           <Button
             variant="outline"
-            className="text-xs"
-            onClick={() => router.push("/activities")}
+            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
+            onClick={() =>
+              clientIdFromQuery
+                ? router.push(`/activities?clientId=${clientIdFromQuery}`)
+                : router.push("/activities")
+            }
           >
             ← Back to activities
           </Button>
         </div>
 
-        {/* Form card */}
-        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            {/* Client selection (searchable dropdown) */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700">
-                Client
-              </label>
-              {clientsLoading ? (
-                <p className="text-[11px] text-slate-500">
-                  Loading clients…
-                </p>
-              ) : clientsError ? (
-                <p className="text-[11px] text-red-600">{clientsError}</p>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search client by name…"
-                  />
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a client…</option>
-                    {filteredClients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-slate-500">
-                    Start typing to filter your client list, then choose the
-                    correct client. In a future phase, this can become a
-                    full searchable combo box.
-                  </p>
+        {/* 🌥️ FROSTED FORM CARD */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border 
+            p-6 space-y-6
+          "
+        >
+          <Card className="border-0 shadow-none p-0">
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {error && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {error}
                 </div>
               )}
-            </div>
 
-            {/* Service type */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700">
-                Service (optional)
-              </label>
-              {serviceTypesLoading ? (
-                <p className="text-[11px] text-slate-500">
-                  Loading service types…
-                </p>
-              ) : serviceTypesError ? (
-                <p className="text-[11px] text-red-600">
-                  {serviceTypesError}
-                </p>
-              ) : (
-                <>
-                  <select
+              {/* Client selection */}
+              <FormField
+                label="Client"
+                description="Start typing to filter, then select the correct client."
+                required
+              >
+                {clientsLoading ? (
+                  <p className="text-[11px] text-slate-500">
+                    Loading clients…
+                  </p>
+                ) : clientsError ? (
+                  <p className="text-[11px] text-red-600">
+                    {clientsError}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      placeholder="Search client by name…"
+                    />
+                    <Select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                    >
+                      <option value="">Select a client…</option>
+                      {filteredClients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+              </FormField>
+
+              {/* Service type */}
+              <FormField
+                label="Service (optional)"
+                description={
+                  serviceTypesError
+                    ? serviceTypesError
+                    : serviceTypesLoading
+                    ? "Loading service types…"
+                    : "Pick a service if you want this activity tied to a specific rate."
+                }
+              >
+                {serviceTypesLoading ? (
+                  <p className="text-[11px] text-slate-500">
+                    Loading service types…
+                  </p>
+                ) : serviceTypesError ? (
+                  <p className="text-[11px] text-red-600">
+                    {serviceTypesError}
+                  </p>
+                ) : (
+                  <Select
                     value={selectedServiceId}
                     onChange={(e) => setSelectedServiceId(e.target.value)}
-                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select a service…</option>
                     {serviceTypes.map((svc) => (
@@ -380,121 +403,106 @@ export default function NewActivityPage({
                           : `– $${svc.rateAmount} flat`}
                       </option>
                     ))}
-                  </select>
-                  <p className="text-[11px] text-slate-500">
-                    Care managers usually pick a service here instead of
-                    manually remembering rates or codes.
-                  </p>
-                </>
-              )}
-            </div>
+                  </Select>
+                )}
+              </FormField>
 
-            {/* Date & time */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-700">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-700">
-                  Start time
-                </label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-700">
-                  Duration (hours)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.25"
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="1.0"
-                />
-              </div>
-            </div>
+              {/* Date & time */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField label="Date" required>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </FormField>
 
-            {/* Source & billable */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-700">
-                  Source
-                </label>
-                <select
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <FormField label="Start time" required>
+                  <Input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </FormField>
+
+                <FormField label="Duration (hours)" required>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(e.target.value)}
+                    placeholder="1.0"
+                  />
+                </FormField>
+              </div>
+
+              {/* Source & billable */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField label="Source">
+                  <Select
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                  >
+                    <option value="manual">Manual entry</option>
+                    <option value="call">Phone call</option>
+                    <option value="visit">On-site visit</option>
+                    <option value="coordination">Care coordination</option>
+                    <option value="other">Other</option>
+                  </Select>
+                </FormField>
+
+                <div className="flex items-center gap-2 mt-6 md:mt-7">
+                  <input
+                    id="billable"
+                    type="checkbox"
+                    checked={isBillable}
+                    onChange={(e) => setIsBillable(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-ef-primary focus:ring-ef-primary-soft"
+                  />
+                  <label
+                    htmlFor="billable"
+                    className="text-xs font-medium text-slate-700"
+                  >
+                    Billable activity
+                  </label>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <FormField label="Notes">
+                <Textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Quick summary of what happened during this call/visit..."
+                />
+              </FormField>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    clientIdFromQuery
+                      ? router.push(
+                          `/activities?clientId=${clientIdFromQuery}`
+                        )
+                      : router.push("/activities")
+                  }
+                  className="text-xs"
+                  disabled={saving}
                 >
-                  <option value="manual">Manual entry</option>
-                  <option value="call">Phone call</option>
-                  <option value="visit">On-site visit</option>
-                  <option value="coordination">Care coordination</option>
-                  <option value="other">Other</option>
-                </select>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving} className="text-xs">
+                  {saving ? "Saving…" : "Save activity"}
+                </Button>
               </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  id="billable"
-                  type="checkbox"
-                  checked={isBillable}
-                  onChange={(e) => setIsBillable(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label
-                  htmlFor="billable"
-                  className="text-xs font-medium text-slate-700"
-                >
-                  Billable activity
-                </label>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700">
-                Notes
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Quick summary of what happened during this call/visit..."
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => router.push("/activities")}
-                className="rounded-md border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <Button type="submit" disabled={saving} className="text-sm">
-                {saving ? "Saving…" : "Save activity"}
-              </Button>
-            </div>
-          </form>
-        </section>
+            </form>
+          </Card>
+        </div>
       </div>
     </ProtectedLayout>
   );

@@ -202,7 +202,6 @@ export default function NewUserPage() {
       }
 
       setSuccess("Care manager created successfully.");
-      // optionally reset form
       setName("");
       setEmail("");
       setPassword("");
@@ -212,7 +211,6 @@ export default function NewUserPage() {
       setSelectedClientIds([]);
       setSaving(false);
 
-      // Navigate back to Team
       setTimeout(() => {
         router.push("/team");
       }, 800);
@@ -225,19 +223,29 @@ export default function NewUserPage() {
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-3 md:flex-row md:items-center md:justify-between
+          "
+        >
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-medium text-white">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-ef-primary">
                 ✨
               </span>
               <span>New Care Manager</span>
             </div>
-            <h1 className="text-2xl font-semibold text-slate-900">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
               Create care manager account
             </h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm opacity-90">
               Set up profile details and assign clients so care managers only see
               the work that belongs to them.
             </p>
@@ -245,246 +253,260 @@ export default function NewUserPage() {
 
           <button
             onClick={() => router.push("/team")}
-            className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-md border border-white/70 bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
           >
             ← Back to team
           </button>
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {success}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1.2fr_1.8fr] md:p-5"
+        {/* 🌥️ FROSTED MAIN CONTAINER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-4
+          "
         >
-          {/* Left: profile details */}
-          <section className="space-y-4 border-b border-slate-100 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-                {profileImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profileImageUrl}
-                    alt={name || "Care manager"}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                ) : (
-                  initials(name)
-                )}
-              </div>
-              <div className="text-xs text-slate-500">
-                <div className="font-semibold text-slate-800">
-                  Profile picture
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {success}
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1.2fr_1.8fr] md:p-5"
+          >
+            {/* Left: profile details */}
+            <section className="space-y-4 border-b border-slate-100 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white overflow-hidden">
+                  {profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileImageUrl}
+                      alt={name || "Care manager"}
+                      className="h-12 w-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    initials(name)
+                  )}
                 </div>
-                <p>Paste an image URL for now. Later we can hook up real uploads.</p>
+                <div className="text-xs text-slate-500">
+                  <div className="font-semibold text-slate-800">
+                    Profile picture
+                  </div>
+                  <p>
+                    Paste an image URL for now. Later we can hook up real
+                    uploads.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Profile image URL
-              </label>
-              <input
-                type="url"
-                value={profileImageUrl}
-                onChange={(e) => setProfileImageUrl(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="https://example.com/avatar.jpg"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Full name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="e.g., Reska S."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="care.manager@example.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Temporary password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Password123!"
-              />
-              <p className="text-[11px] text-slate-400">
-                Share this with the care manager so they can sign in and update
-                their password later.
-              </p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-slate-600">
-                  Role
+                  Profile image URL
                 </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as Role)}
+                <input
+                  type="url"
+                  value={profileImageUrl}
+                  onChange={(e) => setProfileImageUrl(e.target.value)}
                   className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="care_manager">Care manager</option>
-                  <option value="admin">Admin</option>
-                </select>
+                  placeholder="https://example.com/avatar.jpg"
+                />
               </div>
 
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-slate-600">
-                  Title (optional)
+                  Full name
                 </label>
                 <input
                   type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  placeholder="e.g., Lead Care Manager"
+                  placeholder="e.g., Reska S."
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Phone (optional)
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="e.g., (555) 555-1234"
-              />
-            </div>
-          </section>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="care.manager@example.com"
+                />
+              </div>
 
-          {/* Right: client assignments */}
-          <section className="space-y-3 md:pl-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Assign clients
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Choose which clients this care manager should be responsible
-                  for. They will only see assigned clients and their related
-                  activities/invoices.
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  Temporary password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Password123!"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Share this with the care manager so they can sign in and
+                  update their password later.
                 </p>
               </div>
-            </div>
 
-            {/* Search + filters */}
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-              <input
-                type="text"
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search clients by name…"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as "all" | "active" | "inactive")
-                }
-                className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500 md:w-40"
-              >
-                <option value="all">All statuses</option>
-                <option value="active">Active only</option>
-                <option value="inactive">Inactive only</option>
-              </select>
-            </div>
-
-            {/* Clients list */}
-            <div className="mt-2 max-h-80 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
-              {clientsLoading ? (
-                <p className="text-sm text-slate-500">
-                  Loading clients…
-                </p>
-              ) : clientsError ? (
-                <p className="text-sm text-red-600">{clientsError}</p>
-              ) : filteredClients.length === 0 ? (
-                <p className="text-sm text-slate-500">
-                  No clients match your filters.
-                </p>
-              ) : (
-                filteredClients.map((c) => (
-                  <label
-                    key={c.id}
-                    className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-100"
-                  >
-                    <span className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        checked={selectedClientIds.includes(c.id)}
-                        onChange={() => toggleClient(c.id)}
-                        disabled={role !== "care_manager"}
-                      />
-                      <span className="text-slate-800">{c.name}</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      {c.status ?? ""}
-                    </span>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Role
                   </label>
-                ))
-              )}
-            </div>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as Role)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="care_manager">Care manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
 
-            <p className="text-[11px] text-slate-400">
-              You can always change assignments later from the Team page. If you
-              set this user as an admin, client assignment is ignored.
-            </p>
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-slate-600">
+                    Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="e.g., Lead Care Manager"
+                  />
+                </div>
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3">
-              <button
-                type="button"
-                onClick={() => router.push("/team")}
-                className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
-              >
-                {saving ? "Creating…" : "Create care manager"}
-              </button>
-            </div>
-          </section>
-        </form>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  Phone (optional)
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="e.g., (555) 555-1234"
+                />
+              </div>
+            </section>
+
+            {/* Right: client assignments */}
+            <section className="space-y-3 md:pl-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Assign clients
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Choose which clients this care manager should be responsible
+                    for. They will only see assigned clients and their related
+                    work.
+                  </p>
+                </div>
+              </div>
+
+              {/* Search + filters */}
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                <input
+                  type="text"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search clients by name…"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value as "all" | "active" | "inactive"
+                    )
+                  }
+                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500 md:w-40"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="active">Active only</option>
+                  <option value="inactive">Inactive only</option>
+                </select>
+              </div>
+
+              {/* Clients list */}
+              <div className="mt-2 max-h-80 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
+                {clientsLoading ? (
+                  <p className="text-sm text-slate-500">
+                    Loading clients…
+                  </p>
+                ) : clientsError ? (
+                  <p className="text-sm text-red-600">{clientsError}</p>
+                ) : filteredClients.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No clients match your filters.
+                  </p>
+                ) : (
+                  filteredClients.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-100"
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          checked={selectedClientIds.includes(c.id)}
+                          onChange={() => toggleClient(c.id)}
+                          disabled={role !== "care_manager"}
+                        />
+                        <span className="text-slate-800">{c.name}</span>
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {c.status ?? ""}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+
+              <p className="text-[11px] text-slate-400">
+                You can always change assignments later from the Team page. If
+                you set this user as an admin, client assignment is ignored.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => router.push("/team")}
+                  className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
+                >
+                  {saving ? "Creating…" : "Create care manager"}
+                </button>
+              </div>
+            </section>
+          </form>
+        </div>
       </div>
     </ProtectedLayout>
   );

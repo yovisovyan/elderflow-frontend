@@ -1,7 +1,12 @@
 "use client";
 
-import ProtectedLayout from "../../protected-layout";
 import { useEffect, useState } from "react";
+import ProtectedLayout from "../../protected-layout";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Select } from "../../components/ui/Select";
+import { FormField } from "../../components/ui/FormField";
 
 type RateType = "hourly" | "flat";
 
@@ -84,6 +89,7 @@ export default function BillingRatesPage() {
           })) ?? [];
 
         if (incoming.length === 0) {
+          // Seed some sensible defaults
           setServices([
             {
               name: "Care Management – Standard",
@@ -114,7 +120,7 @@ export default function BillingRatesPage() {
   }, []);
 
   function handleChange(
-    id: string | undefined,
+    _id: string | undefined,
     index: number,
     field: keyof ServiceType,
     value: string
@@ -232,210 +238,195 @@ export default function BillingRatesPage() {
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
-                $
-              </span>
-              <span>Service Types &amp; Rates</span>
-            </div>
-            <h1 className="text-2xl font-semibold text-slate-900">
-              Define how you bill for services
+      <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-3 md:flex-row md:items-center md:justify-between
+          "
+        >
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+              Service Types &amp; Rates
             </h1>
-            <p className="text-sm text-slate-600">
-              Set the standard services you offer and how they are billed. These
-              will be used as building blocks when generating invoices.
+            <p className="text-sm opacity-90 mt-1">
+              Define the services you bill for and how they are priced.
             </p>
           </div>
 
-          <div className="text-xs text-slate-500">
-            <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span className="font-medium text-slate-700">Admin only</span>
+          <div className="text-xs text-slate-800">
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 shadow-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="font-medium">Admin only</span>
             </div>
           </div>
         </div>
 
-        {/* Info note */}
-        <section className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 shadow-sm md:px-5">
-          <p className="mb-2 text-sm font-semibold text-slate-900">
-            How this works
-          </p>
-          <ul className="list-disc list-inside space-y-1.5 text-xs md:text-sm">
-            <li>
-              <span className="font-semibold">Hourly</span> services are billed
-              by time (for example, <span className="font-mono">$150/hr</span>).
-            </li>
-            <li>
-              <span className="font-semibold">Flat</span> services are a single
-              fee (for example,
-              <span className="font-mono"> $350</span> per assessment).
-            </li>
-            <li>
-              Billing codes are{" "}
-              <span className="font-semibold">optional</span> and mainly used
-              for exports or payor systems. Care managers will pick services by
-              name — they never need to remember the codes.
-            </li>
-          </ul>
-        </section>
+        {/* 🌥️ FROSTED CONTAINER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {/* Info note */}
+          <Card className="shadow-none border border-slate-200 bg-slate-50">
+            <p className="mb-2 text-sm font-semibold text-slate-900">
+              How service types work
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 text-xs md:text-sm text-slate-700">
+              <li>
+                <span className="font-semibold">Hourly</span> services are
+                billed by time (for example <code>$150/hr</code>).
+              </li>
+              <li>
+                <span className="font-semibold">Flat</span> services are a
+                single fee (for example <code>$350</code> per assessment).
+              </li>
+              <li>
+                Billing codes are optional and mostly used for exports/payor
+                systems. Care managers select services by name.
+              </li>
+            </ul>
+          </Card>
 
-        {/* Loading / error */}
-        {loading && (
-          <p className="text-sm text-slate-500">Loading service types…</p>
-        )}
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {/* Loading / error */}
+          {loading && (
+            <p className="text-sm text-slate-500">Loading service types…</p>
+          )}
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        {!loading && !error && (
-          <form onSubmit={handleSave} className="space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-              {services.map((svc, index) => (
-                <div
-                  key={svc.id ?? index}
-                  className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)_minmax(0,1.2fr)] md:px-5 md:py-4 border-b last:border-b-0 border-slate-100"
-                >
-                  <div className="md:col-span-3 flex items-center justify-between pb-1 md:hidden">
-                    <span className="text-[11px] font-medium text-slate-500">
-                      Service {index + 1}
-                    </span>
-                  </div>
-
-                  {/* Service Name */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Service name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      value={svc.name}
-                      onChange={(e) =>
-                        handleChange(svc.id, index, "name", e.target.value)
-                      }
-                      placeholder="e.g., Ongoing Care Management"
-                    />
-                    <p className="text-[11px] text-slate-400">
-                      How this appears on invoices and internal lists.
-                    </p>
-                  </div>
-
-                  {/* Billing Code */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Billing code{" "}
-                      <span className="font-normal text-slate-400">
-                        (optional)
+          {/* Editable services form */}
+          {!loading && !error && (
+            <form onSubmit={handleSave} className="space-y-5">
+              <Card className="shadow-none border border-slate-200 p-0">
+                {services.map((svc, index) => (
+                  <div
+                    key={svc.id ?? index}
+                    className="
+                      grid grid-cols-1 gap-4 
+                      px-4 py-4 md:px-5 md:py-4 
+                      md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.6fr)]
+                      border-b last:border-b-0 border-slate-100
+                    "
+                  >
+                    {/* Service label on mobile */}
+                    <div className="md:hidden flex justify-between items-center">
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Service {index + 1}
                       </span>
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      value={svc.billingCode || ""}
-                      onChange={(e) =>
-                        handleChange(
-                          svc.id,
-                          index,
-                          "billingCode",
-                          e.target.value
-                        )
-                      }
-                      placeholder="e.g., CM-STD"
-                    />
-                    <p className="text-[11px] text-slate-400">
-                      Leave blank and we&apos;ll suggest a code from the
-                      service name. Care managers will select services by name,
-                      not code.
-                    </p>
-                  </div>
+                    </div>
 
-                  {/* Rate Type + Amount */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Rate
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                        value={svc.rateType}
+                    {/* Service Name */}
+                    <FormField label="Service name">
+                      <Input
+                        value={svc.name}
+                        onChange={(e) =>
+                          handleChange(svc.id, index, "name", e.target.value)
+                        }
+                        placeholder="e.g., Ongoing Care Management"
+                      />
+                    </FormField>
+
+                    {/* Billing Code */}
+                    <FormField
+                      label="Billing code"
+                      description="Optional. Leave blank and we’ll suggest one from the name."
+                    >
+                      <Input
+                        value={svc.billingCode || ""}
                         onChange={(e) =>
                           handleChange(
                             svc.id,
                             index,
-                            "rateType",
+                            "billingCode",
                             e.target.value
                           )
                         }
-                      >
-                        <option value="hourly">Hourly</option>
-                        <option value="flat">Flat</option>
-                      </select>
-                      <div className="flex flex-1 items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm">
-                        <span className="text-xs text-slate-500">$</span>
-                        <input
-                          type="number"
-                          className="w-full bg-transparent text-sm outline-none"
-                          value={svc.rateAmount}
+                        placeholder="e.g., CM-STD"
+                      />
+                    </FormField>
+
+                    {/* Rate Type + Amount */}
+                    <FormField label="Rate">
+                      <div className="flex gap-2">
+                        <Select
+                          value={svc.rateType}
                           onChange={(e) =>
                             handleChange(
                               svc.id,
                               index,
-                              "rateAmount",
+                              "rateType",
                               e.target.value
                             )
                           }
-                          min={0}
-                          step={1}
-                          placeholder="Amount"
-                        />
-                        <span className="text-[11px] text-slate-400">
-                          {svc.rateType === "hourly" ? "/ hr" : "flat"}
-                        </span>
+                          className="max-w-[120px]"
+                        >
+                          <option value="hourly">Hourly</option>
+                          <option value="flat">Flat</option>
+                        </Select>
+                        <div className="flex flex-1 items-center gap-1 rounded-xl border border-ef-border bg-white px-3 py-1.5 text-sm shadow-sm">
+                          <span className="text-xs text-slate-500">$</span>
+                          <input
+                            type="number"
+                            className="w-full bg-transparent text-sm outline-none"
+                            value={svc.rateAmount}
+                            onChange={(e) =>
+                              handleChange(
+                                svc.id,
+                                index,
+                                "rateAmount",
+                                e.target.value
+                              )
+                            }
+                            min={0}
+                            step={1}
+                            placeholder="Amount"
+                          />
+                          <span className="text-[11px] text-slate-400">
+                            {svc.rateType === "hourly" ? "/ hr" : "flat"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      {svc.rateType === "hourly"
-                        ? "Used when billing by tracked time."
-                        : "Used as a one-time fee for this service."}
-                    </p>
+                    </FormField>
                   </div>
-                </div>
-              ))}
-            </section>
+                ))}
+              </Card>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <button
-                type="button"
-                onClick={handleAddNew}
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                + Add another service
-              </button>
-
-              <div className="flex items-center gap-3">
-                {message && (
-                  <span className="text-xs text-emerald-600">
-                    {message}
-                  </span>
-                )}
+              {/* Actions */}
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+                  type="button"
+                  onClick={handleAddNew}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
-                  {saving ? "Saving…" : "Save changes"}
+                  + Add another service
                 </button>
+
+                <div className="flex items-center gap-3">
+                  {message && (
+                    <span className="text-xs text-emerald-600">
+                      {message}
+                    </span>
+                  )}
+                  <Button type="submit" disabled={saving} className="text-xs">
+                    {saving ? "Saving…" : "Save changes"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );

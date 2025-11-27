@@ -399,356 +399,382 @@ export default function TeamMemberPage() {
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-        {/* Header: profile & actions */}
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-3 md:flex-row md:items-center md:justify-between
+          "
+        >
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-medium text-white">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-ef-primary">
                 👤
               </span>
               <span>Care Manager</span>
             </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+              {user?.name || "Care manager"}
+            </h1>
+            <p className="text-sm opacity-90">
+              Manage profile, client assignments, and recent workload for this care manager.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/team")}
-              className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-white/70 bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20"
             >
               ← Back to team
             </button>
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              className="rounded-md border border-red-200 bg-red-50/90 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-70"
+              disabled={deleting}
             >
               {deleting ? "Deleting…" : "Delete CM"}
             </button>
           </div>
         </div>
 
-        {loading && (
-          <p className="text-sm text-slate-500">Loading care manager…</p>
-        )}
+        {/* 🌥️ FROSTED MAIN CONTAINER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {loading && (
+            <p className="text-sm text-slate-500">Loading care manager…</p>
+          )}
 
-        {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && !loading && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        {!loading && !error && user && (
-          <>
-            {/* Profile section */}
-            <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1.4fr_2.1fr] md:p-5">
-              <div className="space-y-4 border-b border-slate-100 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white overflow-hidden">
-                    {profileImageUrlInput ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={profileImageUrlInput}
-                        alt={nameInput || "Care manager"}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      initials(nameInput || user.name)
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    <div className="font-semibold text-slate-800">
-                      Profile picture
+          {!loading && !error && user && (
+            <>
+              {/* Profile section */}
+              <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1.4fr_2.1fr] md:p-5">
+                <div className="space-y-4 border-b border-slate-100 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white overflow-hidden">
+                      {profileImageUrlInput ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profileImageUrlInput}
+                          alt={nameInput || "Care manager"}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        initials(nameInput || user.name)
+                      )}
                     </div>
-                    <p>Paste an image URL for now. Later we can support uploads.</p>
+                    <div className="text-xs text-slate-500">
+                      <div className="font-semibold text-slate-800">
+                        Profile picture
+                      </div>
+                      <p>Paste an image URL for now. Later we can support uploads.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-slate-600">
+                      Profile image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={profileImageUrlInput}
+                      onChange={(e) =>
+                        setProfileImageUrlInput(e.target.value)
+                      }
+                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-slate-600">
+                      Role
+                    </label>
+                    <select
+                      value={roleInput}
+                      onChange={(e) =>
+                        setRoleInput(
+                          e.target.value === "admin"
+                            ? "admin"
+                            : ("care_manager" as const)
+                        )
+                      }
+                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    >
+                      <option value="care_manager">Care manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-medium text-slate-600">
-                    Profile image URL
-                  </label>
-                  <input
-                    type="url"
-                    value={profileImageUrlInput}
-                    onChange={(e) =>
-                      setProfileImageUrlInput(e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                    placeholder="https://example.com/avatar.jpg"
-                  />
-                </div>
+                <div className="space-y-3 md:pl-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Full name
+                      </label>
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="e.g., Jane Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="care.manager@example.com"
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-medium text-slate-600">
-                    Role
-                  </label>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Title (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={titleInput}
+                        onChange={(e) => setTitleInput(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="e.g., Lead Care Manager"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Phone (optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        placeholder="e.g., (555) 555-1234"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-black disabled:opacity-70"
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? "Saving profile…" : "Save profile"}
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* Assignments section */}
+              <form
+                onSubmit={handleSaveAssignments}
+                className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  Assigned clients
+                </p>
+                <p className="text-xs text-slate-500">
+                  Select the clients this care manager is responsible for. They
+                  will only see these clients and their activities/billing.
+                </p>
+
+                {/* Search + Filter */}
+                <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search clients by name…"
+                  />
                   <select
-                    value={roleInput}
+                    value={statusFilter}
                     onChange={(e) =>
-                      setRoleInput(
-                        e.target.value === "admin"
-                          ? "admin"
-                          : ("care_manager" as const)
+                      setStatusFilter(
+                        e.target.value as "all" | "active" | "inactive"
                       )
                     }
-                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500 md:w-40"
                   >
-                    <option value="care_manager">Care manager</option>
-                    <option value="admin">Admin</option>
+                    <option value="all">All statuses</option>
+                    <option value="active">Active only</option>
+                    <option value="inactive">Inactive only</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="space-y-3 md:pl-4">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Full name
-                    </label>
-                    <input
-                      type="text"
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      placeholder="e.g., Jane Doe"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      placeholder="care.manager@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Title (optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={titleInput}
-                      onChange={(e) => setTitleInput(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      placeholder="e.g., Lead Care Manager"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Phone (optional)
-                    </label>
-                    <input
-                      type="tel"
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                      placeholder="e.g., (555) 555-1234"
-                    />
-                  </div>
+                {/* Scrollable client list */}
+                <div className="mt-2 max-h-80 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
+                  {filteredClients.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No clients match your filters.
+                    </p>
+                  ) : (
+                    filteredClients.map((c) => (
+                      <label
+                        key={c.id}
+                        className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-100"
+                      >
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            checked={selectedClientIds.includes(c.id)}
+                            onChange={() => toggleClientSelection(c.id)}
+                          />
+                          <span className="text-slate-800">{c.name}</span>
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {c.status ?? ""}
+                        </span>
+                      </label>
+                    ))
+                  )}
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={handleSaveProfile}
-                    className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-black disabled:opacity-70"
-                    disabled={savingProfile}
+                    onClick={() => router.push("/team")}
+                    className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    disabled={savingAssignments}
                   >
-                    {savingProfile ? "Saving profile…" : "Save profile"}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingAssignments}
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
+                  >
+                    {savingAssignments ? "Saving…" : "Save assignments"}
+                  </button>
+                </div>
+              </form>
+
+              {success && (
+                <p className="text-xs text-emerald-600">{success}</p>
+              )}
+
+              {/* Recent activity timeline */}
+              <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Recent activity
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Latest logged activities for this care manager.
+                </p>
+
+                {recentActivities.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    No recent activities found for this care manager.
+                  </p>
+                ) : (
+                  <ul className="space-y-2 text-sm">
+                    {recentActivities.map((a) => {
+                      const dateStr = a.startTime.slice(0, 10);
+                      const hours = (a.duration || 0) / 60;
+                      const serviceName =
+                        a.serviceType?.name ?? "Care Management Services";
+
+                      return (
+                        <li
+                          key={a.id}
+                          className="flex items-start gap-2 rounded-md bg-slate-50 px-3 py-2"
+                        >
+                          <div className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium text-slate-500">
+                                {dateStr}
+                              </span>
+                              <span className="text-xs text-slate-400">•</span>
+                              <span className="text-sm font-medium text-slate-900">
+                                {hours.toFixed(2)}h
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {serviceName}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600">
+                              {a.isBillable ? "Billable" : "Non-billable"}
+                              {a.client?.name
+                                ? ` · Client: ${a.client.name}`
+                                : ""}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* Delete confirmation overlay */}
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Delete care manager?
+                </h3>
+                <p className="mt-2 text-xs text-slate-600">
+                  This will permanently remove{" "}
+                  <span className="font-semibold">
+                    {user?.name ?? "this care manager"}
+                  </span>{" "}
+                  from ElderFlow. If they still have assigned clients, the
+                  delete will fail and you&apos;ll need to reassign those clients
+                  first.
+                </p>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-red-700 disabled:opacity-70"
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting…" : "Delete care manager"}
                   </button>
                 </div>
               </div>
-            </section>
-
-            {/* Assignments section */}
-            <form
-              onSubmit={handleSaveAssignments}
-              className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-            >
-              <p className="text-sm font-semibold text-slate-900">
-                Assigned clients
-              </p>
-              <p className="text-xs text-slate-500">
-                Select the clients this care manager is responsible for. They
-                will only see these clients and their activities/billing.
-              </p>
-
-              {/* Search + Filter */}
-              <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-                <input
-                  type="text"
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Search clients by name…"
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(e) =>
-                    setStatusFilter(
-                      e.target.value as "all" | "active" | "inactive"
-                    )
-                  }
-                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500 md:w-40"
-                >
-                  <option value="all">All statuses</option>
-                  <option value="active">Active only</option>
-                  <option value="inactive">Inactive only</option>
-                </select>
-              </div>
-
-              {/* Scrollable client list */}
-              <div className="mt-2 max-h-80 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2">
-                {filteredClients.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    No clients match your filters.
-                  </p>
-                ) : (
-                  filteredClients.map((c) => (
-                    <label
-                      key={c.id}
-                      className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-100"
-                    >
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          checked={selectedClientIds.includes(c.id)}
-                          onChange={() => toggleClientSelection(c.id)}
-                        />
-                        <span className="text-slate-800">{c.name}</span>
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        {c.status ?? ""}
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/team")}
-                  className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  disabled={savingAssignments}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingAssignments}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
-                >
-                  {savingAssignments ? "Saving…" : "Save assignments"}
-                </button>
-              </div>
-            </form>
-
-            {success && (
-              <p className="text-xs text-emerald-600">{success}</p>
-            )}
-
-            {/* Recent activity timeline */}
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Recent activity
-              </h2>
-              <p className="text-xs text-slate-500">
-                Latest logged activities for this care manager.
-              </p>
-
-              {recentActivities.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  No recent activities found for this care manager.
-                </p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {recentActivities.map((a) => {
-                    const dateStr = a.startTime.slice(0, 10);
-                    const hours = (a.duration || 0) / 60;
-                    const serviceName =
-                      a.serviceType?.name ?? "Care Management Services";
-
-                    return (
-                      <li
-                        key={a.id}
-                        className="flex items-start gap-2 rounded-md bg-slate-50 px-3 py-2"
-                      >
-                        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-medium text-slate-500">
-                              {dateStr}
-                            </span>
-                            <span className="text-xs text-slate-400">•</span>
-                            <span className="text-sm font-medium text-slate-900">
-                              {hours.toFixed(2)}h
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {serviceName}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600">
-                            {a.isBillable ? "Billable" : "Non-billable"}
-                            {a.client?.name
-                              ? ` · Client: ${a.client.name}`
-                              : ""}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
-
-        {/* Delete confirmation overlay */}
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg">
-              <h3 className="text-sm font-semibold text-slate-900">
-                Delete care manager?
-              </h3>
-              <p className="mt-2 text-xs text-slate-600">
-                This will permanently remove{" "}
-                <span className="font-semibold">
-                  {user?.name ?? "this care manager"}
-                </span>{" "}
-                from ElderFlow. If they still have assigned clients, the delete
-                will fail and you&apos;ll need to reassign those clients first.
-              </p>
-              <div className="mt-4 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  disabled={deleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-red-700 disabled:opacity-70"
-                  disabled={deleting}
-                >
-                  {deleting ? "Deleting…" : "Delete care manager"}
-                </button>
-              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "../protected-layout";
 import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 
 type Activity = {
   id: string;
@@ -105,25 +106,32 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
 
   return (
     <ProtectedLayout>
-      {/* unified layout with other pages */}
-      <div className="mx-auto flex max-w-5xl flex-col space-y-6 px-4 py-6 lg:px-6">
-        {/* Header */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between
+          "
+        >
           <div>
-            <h1 className="text-3xl font-bold">
-              Activities &amp; Time Tracking
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+              Activities & Time Tracking
             </h1>
-            <p className="text-sm text-slate-600">
-              View all logged activities across clients. This list is loaded
-              from your real backend.
+            <p className="text-sm opacity-90 mt-1">
+              View all logged activities across clients, loaded from your real backend.
             </p>
             {clientIdFilter && (
-              <p className="text-xs text-slate-500">
-                Showing activities for a specific client.{" "}
+              <p className="mt-1 text-xs opacity-90">
+                Filtered by client.{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/activities")}
-                  className="underline"
+                  className="underline font-medium"
                 >
                   Clear filter
                 </button>
@@ -133,133 +141,144 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
 
           <Button
             onClick={() => router.push("/activities/new")}
-            className="text-xs"
+            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
           >
             + Add activity
           </Button>
         </div>
 
-        {/* Summary row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Total Logged Hours
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {summary.totalHours.toFixed(1)} hrs
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Across all activities returned by /api/activities.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Entries
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {summary.count}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Activities currently visible in this list.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Active Timer
-            </p>
-            <p className="mt-2 text-sm text-slate-700">
-              No active timer (mock). In a later phase, this is where a real
-              start/stop timer will appear.
-            </p>
-          </div>
-        </div>
-
-        {/* Loading / error */}
-        {loading && (
-          <p className="text-sm text-slate-500">Loading activities...</p>
-        )}
-
-        {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* Activities table */}
-        {!loading && !error && (
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            {activities.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">
-                No activities found yet.
+        {/* 🌥️ FROSTED MAIN CARD */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {/* Summary row */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Total Logged Hours
               </p>
-            ) : (
-              <table className="min-w-full border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Date
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Client
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Care Manager
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Hours
-                    </th>
-                    <th className="border-b border-sale-200 px-3 py-2">
-                      Source
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Notes
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2">
-                      Billable
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activities.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50">
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.startTime ? a.startTime.slice(0, 10) : "-"}
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.client?.name || "Unknown"}
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.cm?.name || "Unknown"}
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {(a.duration / 60).toFixed(2)} hrs
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.source}
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.notes || "-"}
-                      </td>
-                      <td className="border-b border-slate-200 px-3 py-2">
-                        {a.isBillable ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                            Yes
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                            No
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {summary.totalHours.toFixed(1)} hrs
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Across all activities returned by /api/activities.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Entries
+              </p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {summary.count}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Activities currently visible in this list.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Active Timer
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                No active timer yet. In a later phase, this will show a live
+                start/stop timer.
+              </p>
+            </Card>
           </div>
-        )}
+
+          {/* Loading / error */}
+          {loading && (
+            <p className="text-sm text-slate-500">Loading activities...</p>
+          )}
+
+          {error && !loading && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          {/* Activities table */}
+          {!loading && !error && (
+            <Card title="Activities">
+              {activities.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No activities found yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Date
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Client
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Care Manager
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Hours
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Source
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Notes
+                        </th>
+                        <th className="border-b border-slate-200 px-3 py-2">
+                          Billable
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activities.map((a) => (
+                        <tr key={a.id} className="hover:bg-slate-50">
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.startTime ? a.startTime.slice(0, 10) : "-"}
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.client?.name || "Unknown"}
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.cm?.name || "Unknown"}
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {(a.duration / 60).toFixed(2)} hrs
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.source}
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.notes || "-"}
+                          </td>
+                          <td className="border-b border-slate-200 px-3 py-2">
+                            {a.isBillable ? (
+                              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                Yes
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                No
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );

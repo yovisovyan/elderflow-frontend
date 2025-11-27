@@ -4,6 +4,8 @@ import ProtectedLayout from "../protected-layout";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -32,7 +34,7 @@ export default function BillingPage({ searchParams }: BillingPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔹 Export invoices as CSV
+  // Export invoices as CSV
   async function handleExportCsv() {
     try {
       const token = sessionStorage.getItem("token");
@@ -74,7 +76,7 @@ export default function BillingPage({ searchParams }: BillingPageProps) {
     }
   }
 
-  // Fetch real invoices from backend (optionally filtered by clientId)
+  // Fetch real invoices from backend
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -145,15 +147,12 @@ export default function BillingPage({ searchParams }: BillingPageProps) {
     );
 
     const overdueInvoices = invoices.filter((inv) => inv.status === "overdue");
-
     const overdueCount = overdueInvoices.length;
 
-    // Status counts
     const draftCount = invoices.filter((inv) => inv.status === "draft").length;
     const sentCount = invoices.filter((inv) => inv.status === "sent").length;
     const paidCount = invoices.filter((inv) => inv.status === "paid").length;
 
-    // Aging buckets based on periodEnd
     let over30 = 0;
     let over60 = 0;
     let over90 = 0;
@@ -173,7 +172,6 @@ export default function BillingPage({ searchParams }: BillingPageProps) {
       }
     });
 
-    // Top 5 clients by outstanding (simple: sum all sent/overdue)
     const outstandingByClient: Record<
       string,
       { name: string; amount: number }
@@ -203,256 +201,263 @@ export default function BillingPage({ searchParams }: BillingPageProps) {
       draftCount,
       sentCount,
       paidCount,
-      aging: {
-        over30,
-        over60,
-        over90,
-      },
+      aging: { over30, over60, over90 },
       topClients,
     };
   }, [invoices]);
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto flex max-w-5xl flex-col space-y-6 px-4 py-6 lg:px-6">
-        {/* Page header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="mb-1 text-3xl font-bold">Billing</h1>
-            <p className="text-sm text-slate-600">
-              Overview of invoices and outstanding balances. Data is loaded from
-              your real /api/invoices endpoint.
+      <div className="mx-auto max-w-5xl px6:px-6 px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER (no buttons here) */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+          "
+        >
+          <h1 className="mb-1 text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+            Billing
+          </h1>
+          <p className="text-sm opacity-90">
+            Overview of invoices and outstanding balances from your real
+            /api/invoices endpoint.
+          </p>
+        </div>
+
+        {/* 🔘 ACTION BAR BELOW HEADER (on light background) */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {clientIdFilter && (
+            <p className="text-xs text-slate-600">
+              Showing invoices for a specific client.{" "}
+              <button
+                type="button"
+                onClick={() => router.push("/billing")}
+                className="underline font-medium"
+              >
+                Clear filter
+              </button>
             </p>
-            {clientIdFilter && (
-              <p className="mt-1 text-xs text-slate-500">
-                Showing invoices for a specific client.{" "}
-                <button
-                  type="button"
-                  onClick={() => router.push("/billing")}
-                  className="underline"
-                >
-                  Clear filter
-                </button>
-              </p>
-            )}
-          </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
+              variant="outline"
+              className="text-xs"
               onClick={handleExportCsv}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Export CSV
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="outline"
+              className="text-xs"
               onClick={() => router.push("/billing/rates")}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Service Types &amp; Rates
-            </button>
+            </Button>
 
-            <button
-              onClick={() => router.push("/billing/new")}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <Button className="text-xs" onClick={() => router.push("/billing/new")}>
               + Generate Invoice
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Total Billed
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              ${summary.total.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Sum of totalAmount across all invoices.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Outstanding
-            </p>
-            <p className="mt-2 text-2xl font-bold text-amber-700">
-              ${summary.outstanding.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Invoices with status &quot;sent&quot; or &quot;overdue&quot;.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              Overdue Invoices
-            </p>
-            <p className="mt-2 text-2xl font-bold text-red-600">
-              {summary.overdueCount}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Invoices past their due period.
-            </p>
-          </div>
-        </div>
-
-        {/* Status breakdown + aging buckets */}
-        {!loading && !error && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Status breakdown */}
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="mb-2 text-sm font-semibold text-slate-800">
-                Invoice status breakdown
+        {/* 🌥️ FROSTED MAIN CONTAINER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Total Billed
               </p>
-              <div className="space-y-2 text-sm">
-                <StatusRow
-                  label="Draft"
-                  count={summary.draftCount}
-                  tone="default"
-                />
-                <StatusRow
-                  label="Sent"
-                  count={summary.sentCount}
-                  tone="info"
-                />
-                <StatusRow
-                  label="Paid"
-                  count={summary.paidCount}
-                  tone="success"
-                />
-                <StatusRow
-                  label="Overdue"
-                  count={summary.overdueCount}
-                  tone="danger"
-                />
-              </div>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                ${summary.total.toFixed(2)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Sum of totalAmount across all invoices.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Outstanding
+              </p>
+              <p className="mt-2 text-2xl font-bold text-amber-700">
+                ${summary.outstanding.toFixed(2)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Invoices with status &quot;sent&quot; or &quot;overdue&quot;.
+              </p>
+            </Card>
+
+            <Card>
+              <p className="text-xs font-semibold uppercase text-slate-500">
+                Overdue Invoices
+              </p>
+              <p className="mt-2 text-2xl font-bold text-red-600">
+                {summary.overdueCount}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Invoices past their due period.
+              </p>
+            </Card>
+          </div>
+
+          {/* Status breakdown + aging buckets */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Card title="Invoice status breakdown">
+                <div className="space-y-2 text-sm">
+                  <StatusRow
+                    label="Draft"
+                    count={summary.draftCount}
+                    tone="default"
+                  />
+                  <StatusRow
+                    label="Sent"
+                    count={summary.sentCount}
+                    tone="info"
+                  />
+                  <StatusRow
+                    label="Paid"
+                    count={summary.paidCount}
+                    tone="success"
+                  />
+                  <StatusRow
+                    label="Overdue"
+                    count={summary.overdueCount}
+                    tone="danger"
+                  />
+                </div>
+              </Card>
+
+              <Card title="Overdue aging (by period end)">
+                <div className="space-y-2 text-sm">
+                  <AgingRow label="Over 30 days" amount={summary.aging.over30} />
+                  <AgingRow label="Over 60 days" amount={summary.aging.over60} />
+                  <AgingRow label="Over 90 days" amount={summary.aging.over90} />
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400">
+                  Calculated using the invoice period end date.
+                </p>
+              </Card>
             </div>
+          )}
 
-            {/* Aging buckets */}
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="mb-2 text-sm font-semibold text-slate-800">
-                Overdue aging (by period end)
-              </p>
-              <div className="space-y-2 text-sm">
-                <AgingRow label="Over 30 days" amount={summary.aging.over30} />
-                <AgingRow label="Over 60 days" amount={summary.aging.over60} />
-                <AgingRow label="Over 90 days" amount={summary.aging.over90} />
-              </div>
-              <p className="mt-2 text-[11px] text-slate-400">
-                Calculated using the invoice period end date.
-              </p>
+          {/* Top clients by outstanding */}
+          {!loading && !error && summary.topClients.length > 0 && (
+            <Card title="Top clients by outstanding balance">
+              <ul className="divide-y divide-slate-100 text-sm">
+                {summary.topClients.map((c) => (
+                  <li
+                    key={c.name}
+                    className="flex items-center justify-between py-2"
+                  >
+                    <span className="text-slate-800">{c.name}</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      ${c.amount.toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Loading / error */}
+          {loading && (
+            <p className="text-sm text-slate-500">Loading invoices...</p>
+          )}
+
+          {error && !loading && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {error}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Top clients by outstanding */}
-        {!loading && !error && summary.topClients.length > 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="mb-2 text-sm font-semibold text-slate-800">
-              Top clients by outstanding balance
-            </p>
-            <ul className="divide-y divide-slate-100 text-sm">
-              {summary.topClients.map((c) => (
-                <li
-                  key={c.name}
-                  className="flex items-center justify-between py-2"
-                >
-                  <span className="text-slate-800">{c.name}</span>
-                  <span className="text-sm font-semibold text-slate-900">
-                    ${c.amount.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Loading / error */}
-        {loading && (
-          <p className="text-sm text-slate-500">Loading invoices...</p>
-        )}
-
-        {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* Invoices table */}
-        {!loading && !error && (
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-            {invoices.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">
-                No invoices found yet.
-              </p>
-            ) : (
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="border-b border-slate-200 px-4 py-3">
-                      Invoice #
-                    </th>
-                    <th className="border-b border-slate-200 px-4 py-3">
-                      Client
-                    </th>
-                    <th className="border-b border-slate-200 px-4 py-3">
-                      Amount
-                    </th>
-                    <th className="border-b border-slate-200 px-4 py-3">
-                      Status
-                    </th>
-                    <th className="border-b border-slate-200 px-4 py-3">
-                      Period End
-                    </th>
-                    <th className="border-b border-slate-200 px-4 py-3 text-right">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.map((inv, idx) => (
-                    <tr
-                      key={inv.id}
-                      className={`text-sm ${
-                        idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                      } hover:bg-slate-100 transition-colors`}
-                    >
-                      <td className="border-b border-slate-200 px-4 py-3">
-                        <span className="font-medium text-slate-900">
-                          {inv.id}
-                        </span>
-                      </td>
-                      <td className="border-b border-slate-200 px-4 py-3">
-                        {inv.client?.name || "Unknown"}
-                      </td>
-                      <td className="border-b border-slate-200 px-4 py-3">
-                        ${inv.totalAmount.toFixed(2)}
-                      </td>
-                      <td className="border-b border-slate-200 px-4 py-3">
-                        <StatusBadge status={inv.status} />
-                      </td>
-                      <td className="border-b border-slate-200 px-4 py-3 text-xs text-slate-600">
-                        {inv.periodEnd ? inv.periodEnd.slice(0, 10) : "—"}
-                      </td>
-                      <td className="border-b border-slate-200 px-4 py-3 text-right">
-                        <Link
-                          href={`/billing/${inv.id}`}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-700"
+          {/* Invoices table */}
+          {!loading && !error && (
+            <Card title="Invoices">
+              {invoices.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No invoices found yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="border-b border-slate-200 px-4 py-3">
+                          Invoice #
+                        </th>
+                        <th className="border-b border-slate-200 px-4 py-3">
+                          Client
+                        </th>
+                        <th className="border-b border-slate-200 px-4 py-3">
+                          Amount
+                        </th>
+                        <th className="border-b border-slate-200 px-4 py-3">
+                          Status
+                        </th>
+                        <th className="border-b border-slate-200 px-4 py-3">
+                          Period End
+                        </th>
+                        <th className="border-b border-slate-200 px-4 py-3 text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map((inv, idx) => (
+                        <tr
+                          key={inv.id}
+                          className={`text-sm ${
+                            idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                          } hover:bg-slate-100 transition-colors`}
                         >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
+                          <td className="border-b border-slate-200 px-4 py-3">
+                            <span className="font-medium text-slate-900">
+                              {inv.id}
+                            </span>
+                          </td>
+                          <td className="border-b border-slate-200 px-4 py-3">
+                            {inv.client?.name || "Unknown"}
+                          </td>
+                          <td className="border-b border-slate-200 px-4 py-3">
+                            ${inv.totalAmount.toFixed(2)}
+                          </td>
+                          <td className="border-b border-slate-200 px-4 py-3">
+                            <StatusBadge status={inv.status} />
+                          </td>
+                          <td className="border-b border-slate-200 px-4 py-3 text-xs text-slate-600">
+                            {inv.periodEnd ? inv.periodEnd.slice(0, 10) : "—"}
+                          </td>
+                          <td className="border-b border-slate-200 px-4 py-3 text-right">
+                            <Link
+                              href={`/billing/${inv.id}`}
+                              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );

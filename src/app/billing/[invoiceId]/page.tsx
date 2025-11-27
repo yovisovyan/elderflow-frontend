@@ -34,7 +34,6 @@ type ClientInfo = {
   email?: string | null;
   phone?: string | null;
 
-  // NEW: care manager info from backend
   primaryCMId?: string | null;
   primaryCM?: {
     id: string;
@@ -65,7 +64,6 @@ function getClientName(client?: ClientInfo) {
   const parts = [client.firstName, client.lastName].filter(Boolean);
   return parts.length ? parts.join(" ") : "Unnamed client";
 }
-
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
@@ -210,7 +208,6 @@ export default function InvoiceDetailPage() {
           body: JSON.stringify({
             amount: amountNumber,
             method: paymentMethod,
-            // reference: you can add a `paymentReference` state and send it here later
           }),
         }
       );
@@ -268,7 +265,6 @@ export default function InvoiceDetailPage() {
         return;
       }
 
-      // Redirect to Stripe-hosted payment page
       window.location.href = data.url;
     } catch (err) {
       console.error("Error starting Stripe checkout:", err);
@@ -296,7 +292,6 @@ export default function InvoiceDetailPage() {
     try {
       setEmailSending(true);
 
-      // NOTE: endpoint path is still /flipss as in your original code
       const res = await fetch(
         `${API_BASE_URL}/api/invoices/${invoice.id}/flipss`,
         {
@@ -330,7 +325,7 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  // Safely compute paid + balance using new + old fields
+  // Safely compute paid + balance
   const totalAmount = invoice?.totalAmount ?? 0;
   const paidAmount =
     invoice?.paidAmount ??
@@ -349,245 +344,222 @@ export default function InvoiceDetailPage() {
 
   return (
     <ProtectedLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HERO HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between
+          "
+        >
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
               Invoice Detail
             </h1>
-            <p className="text-sm text-slate-500">
-              Review the invoice, line items, and payment history.
+            <p className="text-sm opacity-90 mt-1">
+              Review the invoice, line items, payments, and email status.
             </p>
           </div>
+
+          {invoice && (
+            <div className="text-xs text-slate-900">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 shadow-sm">
+                <span className="text-[11px] font-semibold text-slate-600">
+                  Invoice
+                </span>
+                <span className="max-w-[160px] truncate text-[11px] font-mono text-slate-900">
+                  {invoice.id}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {loading ? (
-          <div className="text-sm text-slate-500">Loading invoice…</div>
-        ) : loadError ? (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {loadError}
-          </div>
-        ) : !invoice ? (
-          <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
-            Invoice not found.
-          </div>
-        ) : (
-          <>
-            {/* Top summary cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Invoice summary */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Invoice Summary
-                </h2>
-                <dl className="mt-3 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Invoice ID</dt>
-                    <dd className="max-w-[180px] truncate text-right text-slate-900">
-                      {invoice.id}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Status</dt>
-                    <dd>
-                      <StatusBadge status={statusLower} />
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Period end</dt>
-                    <dd className="text-slate-900">
-                      {invoice.periodEnd
-                        ? new Date(invoice.periodEnd).toLocaleDateString()
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Total</dt>
-                    <dd className="text-slate-900">
-                      ${totalAmount.toFixed(2)}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-
-              {/* Client info */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-  <h2 className="text-sm font-semibold text-slate-900">
-    Client
-  </h2>
-  <dl className="mt-3 space-y-1 text-sm">
-    <div className="flex justify-between">
-      <dt className="text-slate-500">Name</dt>
-      <dd className="text-slate-900">
-        {getClientName(invoice.client)}
-      </dd>
-    </div>
-    <div className="flex justify-between">
-      <dt className="text-slate-500">Email</dt>
-      <dd className="text-slate-900">
-        {invoice.client?.email || "—"}
-      </dd>
-    </div>
-    <div className="flex justify-between">
-      <dt className="text-slate-500">Phone</dt>
-      <dd className="text-slate-900">
-        {invoice.client?.phone || "—"}
-      </dd>
-    </div>
-    <div className="flex justify-between">
-      <dt className="text-slate-500">Care manager</dt>
-      <dd className="text-slate-900">
-        {invoice.client?.primaryCM?.name || "Not assigned"}
-      </dd>
-    </div>
-  </dl>
-</div>
-
-
-              {/* Payments summary */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Payment Summary
-                </h2>
-                <dl className="mt-3 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Total amount</dt>
-                    <dd className="text-slate-900">
-                      ${totalAmount.toFixed(2)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Paid</dt>
-                    <dd className="text-green-700">
-                      ${paidAmount.toFixed(2)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Balance</dt>
-                    <dd className="text-slate-900">
-                      ${balanceRemaining.toFixed(2)}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
+        {/* FROSTED CONTENT WRAPPER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {loading ? (
+            <div className="text-sm text-slate-500">Loading invoice…</div>
+          ) : loadError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {loadError}
             </div>
-
-            {/* Line items */}
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 px-4 py-3">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Line Items
-                </h2>
-              </div>
-              {invoice.items.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-slate-500">
-                  No line items on this invoice.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 font-medium text-slate-500">
-                          Description
-                        </th>
-                        <th className="px-4 py-3 font-medium text-slate-500">
-                          Hours
-                        </th>
-                        <th className="px-4 py-3 font-medium text-slate-500">
-                          Rate
-                        </th>
-                        <th className="px-4 py-3 font-medium text-slate-500">
-                          Amount
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.items.map((item) => (
-                        <tr key={item.id} className="border-t border-slate-100">
-                          <td className="px-4 py-3 text-sm text-slate-900">
-                            {item.description}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-700">
-                            {item.quantity.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-700">
-                            ${item.unitPrice.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-900">
-                            ${item.amount.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          ) : !invoice ? (
+            <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+              Invoice not found.
             </div>
+          ) : (
+            <>
+              {/* Top summary cards */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Invoice summary */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Invoice Summary
+                  </h2>
+                  <dl className="mt-3 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Invoice ID</dt>
+                      <dd className="max-w-[180px] truncate text-right text-slate-900">
+                        {invoice.id}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Status</dt>
+                      <dd>
+                        <StatusBadge status={statusLower} />
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Period end</dt>
+                      <dd className="text-slate-900">
+                        {invoice.periodEnd
+                          ? new Date(invoice.periodEnd).toLocaleDateString()
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Total</dt>
+                      <dd className="text-slate-900">
+                        ${totalAmount.toFixed(2)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
 
-            {/* Payment history + Add payment */}
-            <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-              {/* Payment history */}
+                {/* Client info */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Client
+                  </h2>
+                  <dl className="mt-3 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Name</dt>
+                      <dd className="text-slate-900">
+                        {getClientName(invoice.client)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Email</dt>
+                      <dd className="text-slate-900">
+                        {invoice.client?.email || "—"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Phone</dt>
+                      <dd className="text-slate-900">
+                        {invoice.client?.phone || "—"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Care manager</dt>
+                      <dd className="text-slate-900">
+                        {invoice.client?.primaryCM?.name || "Not assigned"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {/* Payments summary */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Payment Summary
+                  </h2>
+                  <dl className="mt-3 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Total amount</dt>
+                      <dd className="text-slate-900">
+                        ${totalAmount.toFixed(2)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Paid</dt>
+                      <dd className="text-green-700">
+                        ${paidAmount.toFixed(2)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-slate-500">Balance</dt>
+                      <dd className="text-slate-900">
+                        ${balanceRemaining.toFixed(2)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+
+              {/* Approve button + status msg */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs text-slate-500 min-h-[1rem]">
+                  {statusMessage}
+                </div>
+                <button
+                  type="button"
+                  disabled={statusSaving || invoice.status === "paid"}
+                  onClick={handleApproveInvoice}
+                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {invoice.status === "paid"
+                    ? "Invoice paid"
+                    : statusSaving
+                    ? "Approving…"
+                    : "Mark as sent"}
+                </button>
+              </div>
+
+              {/* Line items */}
               <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-100 px-4 py-3">
                   <h2 className="text-sm font-semibold text-slate-900">
-                    Payment history
+                    Line Items
                   </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    All payments recorded for this invoice, including manual and
-                    online (Stripe) payments.
-                  </p>
                 </div>
-
-                {invoice.payments.length === 0 ? (
+                {invoice.items.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-slate-500">
-                    No payments recorded yet. Use the “Add payment” form or the
-                    online payment option to record a payment.
+                    No line items on this invoice.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          <th className="border-b border-slate-200 px-4 py-2">
-                            Date
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 font-medium text-slate-500">
+                            Description
                           </th>
-                          <th className="border-b border-slate-200 px-4 py-2">
-                            Method
+                          <th className="px-4 py-3 font-medium text-slate-500">
+                            Hours
                           </th>
-                          <th className="border-b border-slate-200 px-4 py-2">
+                          <th className="px-4 py-3 font-medium text-slate-500">
+                            Rate
+                          </th>
+                          <th className="px-4 py-3 font-medium text-slate-500">
                             Amount
-                          </th>
-                          <th className="border-b border-slate-200 px-4 py-2">
-                            Reference / Note
-                          </th>
-                          <th className="border-b border-slate-200 px-4 py-2">
-                            Status
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {invoice.payments.map((p) => (
-                          <tr key={p.id} className="hover:bg-slate-50">
-                            <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
-                              {p.paidAt
-                                ? new Date(p.paidAt).toLocaleString()
-                                : "—"}
+                        {invoice.items.map((item) => (
+                          <tr key={item.id} className="border-t border-slate-100">
+                            <td className="px-4 py-3 text-sm text-slate-900">
+                              {item.description}
                             </td>
-                            <td className="border-b border-slate-200 px-4 py-2">
-                              {renderMethodBadge(p.method)}
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              {item.quantity.toFixed(2)}
                             </td>
-                            <td className="border-b border-slate-200 px-4 py-2">
-                              ${p.amount.toFixed(2)}
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              ${item.unitPrice.toFixed(2)}
                             </td>
-                            <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-700">
-                              {p.reference && p.reference.trim().length > 0
-                                ? p.reference
-                                : "—"}
-                            </td>
-                            <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
-                              {p.status}
+                            <td className="px-4 py-3 text-sm text-slate-900">
+                              ${item.amount.toFixed(2)}
                             </td>
                           </tr>
                         ))}
@@ -597,157 +569,229 @@ export default function InvoiceDetailPage() {
                 )}
               </div>
 
-              {/* Add payment form */}
+              {/* Payment history + Add payment */}
+              <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
+                {/* Payment history */}
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-100 px-4 py-3">
+                    <h2 className="text-sm font-semibold text-slate-900">
+                      Payment history
+                    </h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      All payments recorded for this invoice, including manual
+                      and online (Stripe) payments.
+                    </p>
+                  </div>
+
+                  {invoice.payments.length === 0 ? (
+                    <div className="px-4 py-6 text-sm text-slate-500">
+                      No payments recorded yet. Use the “Add payment” form or the
+                      online payment option to record a payment.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <th className="border-b border-slate-200 px-4 py-2">
+                              Date
+                            </th>
+                            <th className="border-b border-slate-200 px-4 py-2">
+                              Method
+                            </th>
+                            <th className="border-b border-slate-200 px-4 py-2">
+                              Amount
+                            </th>
+                            <th className="border-b border-slate-200 px-4 py-2">
+                              Reference / Note
+                            </th>
+                            <th className="border-b border-slate-200 px-4 py-2">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invoice.payments.map((p) => (
+                            <tr key={p.id} className="hover:bg-slate-50">
+                              <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
+                                {p.paidAt
+                                  ? new Date(p.paidAt).toLocaleString()
+                                  : "—"}
+                              </td>
+                              <td className="border-b border-slate-200 px-4 py-2">
+                                {renderMethodBadge(p.method)}
+                              </td>
+                              <td className="border-b border-slate-200 px-4 py-2">
+                                ${p.amount.toFixed(2)}
+                              </td>
+                              <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-700">
+                                {p.reference && p.reference.trim().length > 0
+                                  ? p.reference
+                                  : "—"}
+                              </td>
+                              <td className="border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
+                                {p.status}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add payment form */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Add Payment
+                  </h2>
+                  <form className="mt-3 space-y-3" onSubmit={handleAddPayment}>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-slate-700">
+                        Amount
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="e.g. 150.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-slate-700">
+                        Method
+                      </label>
+                      <select
+                        className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      >
+                        <option value="Check">Check</option>
+                        <option value="Bank transfer">Bank transfer</option>
+                        <option value="Cash">Cash</option>
+                        <option value="ACH">ACH</option>
+                        <option value="Zelle">Zelle</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <button
+                        type="submit"
+                        className="rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+                        disabled={paymentSaving}
+                      >
+                        {paymentSaving ? "Saving..." : "Add payment"}
+                      </button>
+                    </div>
+                  </form>
+                  {paymentMessage && (
+                    <p className="mt-1 text-xs text-slate-600">
+                      {paymentMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Online payment (Stripe) */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-slate-900">
-                  Add Payment
+                  Online payment (optional)
                 </h2>
-                <form className="mt-3 space-y-3" onSubmit={handleAddPayment}>
-                  <div className="space-y-1">
+                <p className="mt-2 text-xs text-slate-600">
+                  Generate a secure online payment screen for this invoice. You
+                  can still accept checks, cash, or ACH and record them above.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleStripeCheckout}
+                    className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+                    disabled={!invoice || invoice.status === "paid"}
+                  >
+                    {invoice?.status === "paid"
+                      ? "Invoice already paid"
+                      : "Generate pay-online link"}
+                  </button>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  The family will see a Stripe-hosted payment page. When they
+                  pay, the invoice can be updated automatically via webhooks.
+                </p>
+              </div>
+
+              {/* Email invoice */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Email invoice
+                </h2>
+                <p className="mt-2 text-xs text-slate-600">
+                  Send this invoice to the billing contact. We&apos;ve defaulted
+                  to the client&apos;s email, but you can change it if you need
+                  to send it somewhere else.
+                </p>
+                <form
+                  className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end"
+                  onSubmit={handleEmailInvoice}
+                >
+                  <div className="flex-1 space-y-1">
                     <label className="block text-xs font-medium text-slate-700">
-                      Amount
+                      Send to
                     </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type="email"
+                      value={emailTo}
+                      onChange={(e) => setEmailTo(e.target.value)}
+                      placeholder="billing-contact@example.com"
                       className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="e.g. 150.00"
                     />
+                    <p className="text-[11px] text-slate-500">
+                      {invoice.client?.email ? (
+                        <>
+                          Default from client:&nbsp;
+                          <span className="font-medium">
+                            {invoice.client.email}
+                          </span>
+                          . You can overwrite this if the family wants invoices
+                          sent somewhere else.
+                        </>
+                      ) : (
+                        "No email stored on the client profile. Enter a billing email manually."
+                      )}
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-700">
-                      Method
-                    </label>
-                    <select
-                      className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
+
+                  <div className="flex flex-col gap-2 sm:w-auto sm:flex-none sm:pl-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (invoice.client?.email) {
+                          setEmailTo(invoice.client.email);
+                        }
+                      }}
+                      className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                      disabled={!invoice.client?.email || emailSending}
                     >
-                      <option value="Check">Check</option>
-                      <option value="Bank transfer">Bank transfer</option>
-                      <option value="Cash">Cash</option>
-                      <option value="ACH">ACH</option>
-                      <option value="Zelle">Zelle</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
+                      Use client email
+                    </button>
                     <button
                       type="submit"
-                      className="rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
-                      disabled={paymentSaving}
+                      disabled={emailSending}
+                      className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
                     >
-                      {paymentSaving ? "Saving..." : "Add payment"}
+                      {emailSending ? "Sending…" : "Send invoice email"}
                     </button>
                   </div>
                 </form>
-                {paymentMessage && (
-                  <p className="mt-1 text-xs text-slate-600">
-                    {paymentMessage}
-                  </p>
+                {emailMessage && (
+                  <p className="mt-1 text-xs text-slate-600">{emailMessage}</p>
                 )}
               </div>
-            </div>
-
-            {/* Online payment (Stripe) */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Online payment (optional)
-              </h2>
-              <p className="mt-2 text-xs text-slate-600">
-                Generate a secure online payment screen for this invoice. You
-                can still accept checks, cash, or ACH and record them above.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleStripeCheckout}
-                  className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-                  disabled={!invoice || invoice.status === "paid"}
-                >
-                  {invoice?.status === "paid"
-                    ? "Invoice already paid"
-                    : "Generate pay-online link"}
-                </button>
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500">
-                The family will see a Stripe-hosted payment page. When they pay,
-                the invoice can be updated automatically via webhooks.
-              </p>
-            </div>
-
-            {/* Email invoice */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Email invoice
-              </h2>
-              <p className="mt-2 text-xs text-slate-600">
-                Send this invoice to the billing contact. We&apos;ve defaulted
-                to the client&apos;s email, but you can change it if you need to
-                send it somewhere else.
-              </p>
-              <form
-                className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end"
-                onSubmit={handleEmailInvoice}
-              >
-                <div className="flex-1 space-y-1">
-                  <label className="block text-xs font-medium text-slate-700">
-                    Send to
-                  </label>
-                  <input
-                    type="email"
-                    value={emailTo}
-                    onChange={(e) => setEmailTo(e.target.value)}
-                    placeholder="billing-contact@example.com"
-                    className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-[11px] text-slate-500">
-                    {invoice.client?.email ? (
-                      <>
-                        Default from client:&nbsp;
-                        <span className="font-medium">
-                          {invoice.client.email}
-                        </span>
-                        . You can overwrite this if the family wants invoices
-                        sent somewhere else.
-                      </>
-                    ) : (
-                      "No email stored on the client profile. Enter a billing email manually."
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2 sm:w-auto sm:flex-none sm:pl-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (invoice.client?.email) {
-                        setEmailTo(invoice.client.email);
-                      }
-                    }}
-                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={!invoice.client?.email || emailSending}
-                  >
-                    Use client email
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={emailSending}
-                    className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
-                  >
-                    {emailSending ? "Sending…" : "Send invoice email"}
-                  </button>
-                </div>
-              </form>
-              {emailMessage && (
-                <p className="mt-1 text-xs text-slate-600">{emailMessage}</p>
-              )}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );
@@ -772,7 +816,7 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs ${colorClasses}`}
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${colorClasses}`}
     >
       {status.toUpperCase()}
     </span>

@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "../../../protected-layout";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
-
+import { Input } from "../../../components/ui/Input";
+import { Select } from "../../../components/ui/Select";
+import { FormField } from "../../../components/ui/FormField";
 
 type Client = {
   id: string;
@@ -59,7 +61,6 @@ export default function EditClientPage() {
         setLoading(true);
         setLoadingError(null);
 
-        // reuse GET /api/clients and find by id
         const res = await fetch(`${API_BASE_URL}/api/clients`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -114,7 +115,7 @@ export default function EditClientPage() {
       return;
     }
 
-    if (!name || !billingContactName) {
+    if (!name.trim() || !billingContactName.trim()) {
       showAlert(
         "Please fill in Client Name and Billing Contact Name.",
         "error"
@@ -125,7 +126,6 @@ export default function EditClientPage() {
     setSaving(true);
 
     try {
-      // We assume a PATCH /api/clients/:id route
       const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
         method: "PATCH",
         headers: {
@@ -133,10 +133,10 @@ export default function EditClientPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name,
+          name: name.trim(),
           status,
-          billingContactName,
-          billingContactEmail,
+          billingContactName: billingContactName.trim(),
+          billingContactEmail: billingContactEmail.trim(),
         }),
       });
 
@@ -155,7 +155,6 @@ export default function EditClientPage() {
       showAlert("Client updated successfully!", "success");
       setSaving(false);
 
-      // Redirect back to client detail after brief delay
       setTimeout(() => {
         router.push(`/clients/${clientId}`);
       }, 800);
@@ -168,20 +167,31 @@ export default function EditClientPage() {
 
   return (
     <ProtectedLayout>
-      <div className="max-w-3xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+        {/* POP-LITE HEADER */}
+        <div
+          className="
+          rounded-2xl 
+          bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong 
+          p-6 shadow-medium text-white
+          border border-white/20
+          backdrop-blur-xl
+          flex items-center justify-between gap-3
+        "
+        >
           <div>
-            <h1 className="text-3xl font-bold">Edit Client</h1>
-            <p className="text-sm text-slate-600">
-              Update basic details and billing contact information.
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+              Edit Client
+            </h1>
+            <p className="text-sm opacity-90 mt-1">
+              Update client details and billing contact information.
             </p>
           </div>
 
           <Button
             variant="outline"
             onClick={() => router.push(`/clients/${clientId}`)}
-            className="text-xs"
+            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
           >
             ← Back to client
           </Button>
@@ -190,7 +200,7 @@ export default function EditClientPage() {
         {/* Alert dialog */}
         <dialog
           ref={alertRef}
-          className="rounded-lg p-6 w-80 backdrop:bg-black/30"
+          className="rounded-2xl border border-ef-border bg-white p-6 w-80 backdrop:bg-black/30 shadow-medium"
         >
           <h3
             className={`text-lg font-bold mb-3 ${
@@ -203,7 +213,7 @@ export default function EditClientPage() {
           <p className="text-sm mb-4">{alertMessage}</p>
 
           <form method="dialog">
-            <button className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">
+            <button className="px-4 py-2 rounded-md bg-ef-primary text-white text-sm hover:bg-ef-primary-strong">
               OK
             </button>
           </form>
@@ -211,7 +221,9 @@ export default function EditClientPage() {
 
         {/* Loading / error states */}
         {loading && (
-          <p className="text-sm text-slate-500">Loading client details...</p>
+          <p className="text-sm text-slate-500">
+            Loading client details...
+          </p>
         )}
 
         {loadingError && !loading && (
@@ -220,84 +232,85 @@ export default function EditClientPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Frosted form card */}
         {!loading && !loadingError && client && (
-          <Card>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name + Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Client Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
+          <div
+            className="
+              rounded-2xl bg-white/80 backdrop-blur-sm
+              shadow-medium border border-ef-border 
+              p-6 space-y-6
+            "
+          >
+            <Card className="border-0 shadow-none p-0 space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name + Status */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <FormField label="Client Name" required>
+                      <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Client full name"
+                      />
+                    </FormField>
+                  </div>
+
+                  <div>
+                    <FormField label="Status">
+                      <Select
+                        value={status}
+                        onChange={(e) =>
+                          setStatus(e.target.value as "active" | "inactive")
+                        }
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </Select>
+                    </FormField>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Status
-                  </label>
-                  <select
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                    value={status}
-                    onChange={(e) =>
-                      setStatus(e.target.value as "active" | "inactive")
-                    }
+                {/* Billing contact */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Billing Contact Name" required>
+                    <Input
+                      value={billingContactName}
+                      onChange={(e) =>
+                        setBillingContactName(e.target.value)
+                      }
+                      placeholder="Family member / POA"
+                    />
+                  </FormField>
+
+                  <FormField label="Billing Contact Email">
+                    <Input
+                      type="email"
+                      value={billingContactEmail}
+                      onChange={(e) =>
+                        setBillingContactEmail(e.target.value)
+                      }
+                      placeholder="billing@example.com"
+                    />
+                  </FormField>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push(`/clients/${clientId}`)}
+                    className="text-xs"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={saving} className="text-xs">
+                    {saving ? "Saving..." : "Save changes"}
+                  </Button>
                 </div>
-              </div>
-
-              {/* Billing contact */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Billing Contact Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                    value={billingContactName}
-                    onChange={(e) => setBillingContactName(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Billing Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                    value={billingContactEmail}
-                    onChange={(e) => setBillingContactEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(`/clients/${clientId}`)}
-                  className="text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={saving} className="text-xs">
-                  {saving ? "Saving..." : "Save changes"}
-                </Button>
-              </div>
-            </form>
-          </Card>
+              </form>
+            </Card>
+          </div>
         )}
       </div>
     </ProtectedLayout>

@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProtectedLayout from "../protected-layout";
 import { DataTable } from "../components/ui/DataTable";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -20,7 +24,6 @@ type Client = {
   billingContactPhone?: string | null;
   status?: ClientStatus;
 
-  // NEW: primaryCM returned by backend
   primaryCM?: {
     id: string;
     name: string;
@@ -35,7 +38,6 @@ export default function ClientsPage() {
   const [search, setSearch] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // NEW: check if admin to show CM links
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function ClientsPage() {
     fetchClients();
   }, []);
 
-  // Filter logic (unchanged)
+  // Filter logic
   const filteredClients = clients.filter((client) => {
     const matchesStatus =
       !statusFilter ||
@@ -104,7 +106,7 @@ export default function ClientsPage() {
     return matchesStatus && matchesSearch;
   });
 
-  // Helper: CM avatar initials
+  // CM initials
   function initials(name: string | undefined | null) {
     if (!name) return "CM";
     const parts = name.trim().split(" ");
@@ -113,7 +115,6 @@ export default function ClientsPage() {
     return (first + second).toUpperCase();
   }
 
-  // UPDATED COLUMNS with CM avatar + link
   const columns = [
     {
       key: "name",
@@ -123,7 +124,6 @@ export default function ClientsPage() {
 
         return (
           <div className="flex items-center gap-3">
-            {/* CM Avatar if exists */}
             {cm && (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white overflow-hidden">
                 {cm.profileImageUrl ? (
@@ -139,7 +139,6 @@ export default function ClientsPage() {
               </div>
             )}
 
-            {/* Client name + primary CM link (admin only) */}
             <div className="flex flex-col">
               <span className="font-medium">{c.name}</span>
 
@@ -201,73 +200,91 @@ export default function ClientsPage() {
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 lg:px-6">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+        {/* 🌈 POP-LITE HEADER */}
+        <div
+          className="
+            rounded-2xl
+            bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong
+            p-6 shadow-medium text-white
+            border border-white/20
+            backdrop-blur-xl
+            flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between
+          "
+        >
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
               Clients
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm opacity-90 mt-1">
               Manage your ElderFlow clients and billing contacts.
             </p>
           </div>
 
-          <Link
-            href="/clients/new"
-            className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+          <Button
+            onClick={() => (window.location.href = "/clients/new")}
+            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
           >
             + New client
-          </Link>
+          </Button>
         </div>
 
-        {/* Filters */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Status
-              </label>
-              <select
-                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+        {/* 🌥️ FROSTED MAIN CONTAINER */}
+        <div
+          className="
+            rounded-2xl bg-white/80 backdrop-blur-sm
+            shadow-medium border border-ef-border
+            p-6 space-y-6
+          "
+        >
+          {/* Filters */}
+          <Card className="shadow-none border border-slate-200">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">
+                  Status
+                </label>
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-40"
+                >
+                  <option value="">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Search
-              </label>
-              <input
-                type="text"
-                className="w-64 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by name or email"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700">
+                  Search
+                </label>
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-64"
+                  placeholder="Search by name or email"
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </Card>
 
-        {/* Table */}
-        <section>
+          {/* Table */}
           {error ? (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={filteredClients}
-              loading={loading}
-              emptyMessage="No clients match this filter. Try adjusting the status or search text."
-            />
+            <Card className="shadow-none border border-slate-200">
+              <DataTable
+                columns={columns}
+                data={filteredClients}
+                loading={loading}
+                emptyMessage="No clients match this filter. Try adjusting the status or search text."
+              />
+            </Card>
           )}
-        </section>
+        </div>
       </div>
     </ProtectedLayout>
   );
