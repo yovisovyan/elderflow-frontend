@@ -5,14 +5,6 @@ import { useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import {
-  CalendarDays,
-  ListTodo,
-  Clock,
-  NotebookPen,
-  Timer,
-  Plus,
-} from "lucide-react";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -112,7 +104,9 @@ export default function CmDashboardPage() {
           <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 p-8 text-white shadow-lg">
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-[11px] font-medium backdrop-blur">
-                <Clock className="h-3 w-3 text-white" />
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-[10px] font-semibold text-indigo-700">
+                  ⏱
+                </span>
                 Care Manager Dashboard
               </div>
 
@@ -139,8 +133,8 @@ export default function CmDashboardPage() {
               onClick={handleLogActivity}
               className="flex items-center gap-2 rounded-lg"
             >
-              <Plus className="h-4 w-4" />
-              Log Activity
+              <span className="text-xs">➕</span>
+              <span>Log Activity</span>
             </Button>
 
             <Button
@@ -148,8 +142,8 @@ export default function CmDashboardPage() {
               variant="outline"
               className="flex items-center gap-2 rounded-lg"
             >
-              <NotebookPen className="h-4 w-4" />
-              Add Client Note
+              <span className="text-xs">📝</span>
+              <span>Add Client Note</span>
             </Button>
 
             <Button
@@ -157,8 +151,8 @@ export default function CmDashboardPage() {
               variant="outline"
               className="flex items-center gap-2 rounded-lg"
             >
-              <Timer className="h-4 w-4" />
-              Start Timer
+              <span className="text-xs">⏱</span>
+              <span>Start Timer</span>
             </Button>
           </section>
 
@@ -166,31 +160,40 @@ export default function CmDashboardPage() {
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="rounded-2xl p-5 shadow-sm">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <Clock className="h-4 w-4 text-slate-400" />
-                Today&apos;s hours
+                <span>⏰</span>
+                <span>Today&apos;s hours</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
                 {summary?.todayHours.toFixed(1) ?? "0.0"}h
               </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Sum of your logged activity for today.
+              </p>
             </Card>
 
             <Card className="rounded-2xl p-5 shadow-sm">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <CalendarDays className="h-4 w-4 text-slate-400" />
-                This week
+                <span>📅</span>
+                <span>This week</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
                 {summary?.weekHours.toFixed(1) ?? "0.0"}h
               </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Total hours from Monday through today.
+              </p>
             </Card>
 
             <Card className="rounded-2xl p-5 shadow-sm">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <ListTodo className="h-4 w-4 text-slate-400" />
-                Assigned clients
+                <span>👥</span>
+                <span>Assigned clients</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
                 {summary?.assignedClients ?? 0}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Clients you&apos;re currently responsible for.
               </p>
             </Card>
           </section>
@@ -201,14 +204,16 @@ export default function CmDashboardPage() {
             <div className="space-y-4">
               {/* TODAY'S FOCUS */}
               <Card className="rounded-2xl p-5 shadow-sm">
-                 <div className="mb-3 flex items-center gap-2">
-                  <ListTodo className="h-4 w-4 text-indigo-600" />
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs">
+                    ✅
+                  </span>
                   <h2 className="text-sm font-semibold text-slate-900">
                     Today&apos;s focus
                   </h2>
                 </div>
 
-                <p className="text-xs text-slate-500 mb-3">
+                <p className="mb-3 text-xs text-slate-500">
                   Lightweight list to help you stay organized.
                 </p>
 
@@ -228,11 +233,18 @@ export default function CmDashboardPage() {
               {/* RECENT ACTIVITY */}
               <Card className="rounded-2xl p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-600" />
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs">
+                    📊
+                  </span>
                   <h2 className="text-sm font-semibold text-slate-900">
-                    Recent Activity
+                    Recent activity
                   </h2>
                 </div>
+
+                <p className="mb-2 text-xs text-slate-500">
+                  Static example data for now. In the next step, this will show
+                  your real recent activities.
+                </p>
 
                 <ul className="space-y-2 text-sm text-slate-700">
                   <li className="rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm">
@@ -250,14 +262,21 @@ export default function CmDashboardPage() {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-4">
-              {/* UPCOMING */}
+              {/* UPCOMING APPOINTMENTS */}
               <Card className="rounded-2xl p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-emerald-600" />
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs">
+                    📅
+                  </span>
                   <h2 className="text-sm font-semibold text-slate-900">
                     Upcoming appointments
                   </h2>
                 </div>
+
+                <p className="mb-2 text-xs text-slate-500">
+                  Example appointments for now. Later, we can pull from your
+                  calendar or scheduled activities.
+                </p>
 
                 <ul className="space-y-2 text-sm text-slate-700">
                   <li className="rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm">
@@ -269,19 +288,21 @@ export default function CmDashboardPage() {
                 </ul>
               </Card>
 
-              {/* TIMER */}
-              <Card className="rounded-2xl p-5 shadow-sm border-dashed">
+              {/* TIMER STATUS */}
+              <Card className="rounded-2xl border-dashed p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
-                  <Timer className="h-4 w-4 text-slate-600" />
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs">
+                    ⏱
+                  </span>
                   <h2 className="text-sm font-semibold text-slate-900">
-                    Timer status
+                    Timer status (coming soon)
                   </h2>
                 </div>
 
                 <p className="text-xs text-slate-500">
                   When tracking is active, a live timer will appear here with a
-                  &quot;Stop &amp; Save&quot; button to automatically pre-fill
-                  your activity entry.
+                  &quot;Stop &amp; Save&quot; button to automatically pre-fill a
+                  new activity entry with the duration and client information.
                 </p>
               </Card>
             </div>
