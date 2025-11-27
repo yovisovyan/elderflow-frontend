@@ -10,26 +10,27 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 type CmSummary = {
-  todayHours: number;
-  weekHours: number;
-  assignedClients: number;
+  todayHours: number | null;
+  weekHours: number | null;
+  assignedClients: number | null;
 };
 
 type RecentActivity = {
   id: string;
   startTime: string;
-  duration: number;
+  duration: number | null;
   isBillable: boolean;
-  client?: { name?: string | null } | null;
+  client?: { id?: string; name?: string | null } | null;
   serviceType?: { name?: string | null } | null;
 };
 
 type UpcomingVisit = {
   id: string;
   startTime: string;
-  duration: number;
+  duration: number | null;
   clientName: string;
   serviceName: string;
+  clientId?: string | null;
 };
 
 type ClientNote = {
@@ -45,6 +46,31 @@ type ClientOption = {
   name: string;
   status?: string | null;
 };
+
+function formatDateTimeShort(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const date = d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const time = d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${date} · ${time}`;
+}
+
+function formatDateShort(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export default function CmDashboardPage() {
   const router = useRouter();
@@ -111,15 +137,43 @@ export default function CmDashboardPage() {
         }
 
         setSummary({
-          todayHours: data.todayHours ?? 0,
-          weekHours: data.weekHours ?? 0,
-          assignedClients: data.assignedClients ?? 0,
+          todayHours:
+            typeof data.todayHours === "number" ? data.todayHours : 0,
+          weekHours: typeof data.weekHours === "number" ? data.weekHours : 0,
+          assignedClients:
+            typeof data.assignedClients === "number"
+              ? data.assignedClients
+              : 0,
         });
 
-        setRecentActivities(data.recentActivities || []);
-        setUpcomingVisits(data.upcomingVisits || []);
+        setRecentActivities((data.recentActivities || []).map((a: any) => ({
+          id: a.id,
+          startTime: a.startTime,
+          duration:
+            typeof a.duration === "number" ? a.duration : a.duration ?? 0,
+          isBillable: !!a.isBillable,
+          client: a.client
+            ? {
+                id: a.client.id,
+                name: a.client.name,
+              }
+            : undefined,
+          serviceType: a.serviceType
+            ? { name: a.serviceType.name }
+            : undefined,
+        })));
 
-        // Fetch latest notes (separate endpoint – backend can wire this)
+        setUpcomingVisits((data.upcomingVisits || []).map((v: any) => ({
+          id: v.id,
+          startTime: v.startTime,
+          duration:
+            typeof v.duration === "number" ? v.duration : v.duration ?? 0,
+          clientName: v.clientName,
+          serviceName: v.serviceName,
+          clientId: v.clientId ?? null,
+        })));
+
+        // Fetch latest notes
         setNotesLoading(true);
         try {
           const notesRes = await fetch(
@@ -167,7 +221,6 @@ export default function CmDashboardPage() {
       setClientsLoading(true);
       setClientsError(null);
 
-      // Adjust this endpoint/params to match your real backend shape
       const res = await fetch(`${API_BASE_URL}/api/clients`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -186,7 +239,6 @@ export default function CmDashboardPage() {
 
       const data = await res.json();
 
-      // Expecting an array of clients with id + name
       const mapped: ClientOption[] = (data || []).map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -294,7 +346,7 @@ export default function CmDashboardPage() {
         };
         setLatestNotes((prev) => [newNote, ...prev].slice(0, 5));
       } else {
-        // fallback: just refetch list
+        // fallback: refetch list
         try {
           const notesRes = await fetch(
             `${API_BASE_URL}/api/cm/notes?limit=5`,
@@ -360,6 +412,21 @@ export default function CmDashboardPage() {
     c.name.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
+  const todayHoursLabel =
+    summary && typeof summary.todayHours === "number"
+      ? summary.todayHours.toFixed(1)
+      : "0.0";
+
+  const weekHoursLabel =
+    summary && typeof summary.weekHours === "number"
+      ? summary.weekHours.toFixed(1)
+      : "0.0";
+
+  const assignedClientsLabel =
+    summary && typeof summary.assignedClients === "number"
+      ? summary.assignedClients
+      : 0;
+
   return (
     <ProtectedLayout>
       <div className="min-h-[calc(100vh-56px)] bg-slate-50">
@@ -383,7 +450,6 @@ export default function CmDashboardPage() {
                 activity from a focused, easy-to-use dashboard.
               </p>
             </div>
-
 
             <div className="pointer-events-none absolute inset-0 opacity-30">
               <div className="absolute -left-16 top-10 h-48 w-48 rounded-full bg-white/30 blur-3xl" />
@@ -432,7 +498,7 @@ export default function CmDashboardPage() {
                 <span>Today&apos;s hours</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
-                {summary ? summary.todayHours.toFixed(1) : "0.0"}h
+                {todayHoursLabel}h
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Sum of your logged activity for today.
@@ -445,7 +511,7 @@ export default function CmDashboardPage() {
                 <span>Last 7 days</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
-                {summary ? summary.weekHours.toFixed(1) : "0.0"}h
+                {weekHoursLabel}h
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Total hours in the last 7 days.
@@ -458,7 +524,7 @@ export default function CmDashboardPage() {
                 <span>Assigned clients</span>
               </p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
-                {summary?.assignedClients ?? 0}
+                {assignedClientsLabel}
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Clients you&apos;re currently responsible for.
@@ -470,7 +536,7 @@ export default function CmDashboardPage() {
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
             {/* LEFT COLUMN */}
             <div className="space-y-4">
-              {/* Today’s focus (still static for now) */}
+              {/* Today’s focus (static helper) */}
               <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -543,17 +609,17 @@ export default function CmDashboardPage() {
                 </div>
 
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-s
+                     slate-400">
                     This list is static for now – your real work comes from
                     logged activities.
                   </p>
                   <Button
-  className="text-[11px] md:hidden px-3 py-1.5"
-  onClick={() => router.push("/activities")}
->
-  View activity
-</Button>
-
+                    className="text-[11px] md:hidden px-3 py-1.5"
+                    onClick={() => router.push("/activities")}
+                  >
+                    View activity
+                  </Button>
                 </div>
               </Card>
 
@@ -570,30 +636,43 @@ export default function CmDashboardPage() {
 
                 {!recentActivities.length ? (
                   <p className="text-xs text-slate-500">
-                    You haven&apos;t logged any activities yet. Once you do,
-                    they&apos;ll appear here.
+                    💤 No activity yet. Log your first call, visit, or email to
+                    see it here.
                   </p>
                 ) : (
                   <ul className="space-y-2 text-sm text-slate-700">
                     {recentActivities.map((a) => {
-                      const dateStr = a.startTime.slice(0, 10);
-                      const hours = (a.duration || 0) / 60;
+                      const hours =
+                        typeof a.duration === "number"
+                          ? a.duration / 60
+                          : (a.duration ?? 0) / 60;
+                      const hoursLabel = hours.toFixed(2);
                       const serviceName =
                         a.serviceType?.name ?? "Care Management";
                       const clientName = a.client?.name ?? "Unknown client";
+                      const dateLabel = formatDateTimeShort(a.startTime);
+
+                      const handleClick = () => {
+                        if (a.client?.id) {
+                          router.push(`/activities?clientId=${a.client.id}`);
+                        } else {
+                          router.push("/activities");
+                        }
+                      };
 
                       return (
                         <li
                           key={a.id}
-                          className="rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm"
+                          className="cursor-pointer rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 transition"
+                          onClick={handleClick}
                         >
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-medium text-slate-500">
-                              {dateStr}
+                              {dateLabel}
                             </span>
                             <span className="text-xs text-slate-400">•</span>
                             <span className="font-semibold text-slate-900">
-                              {hours.toFixed(2)}h
+                              {hoursLabel}h
                             </span>
                             <span className="text-xs text-slate-500">
                               {serviceName}
@@ -616,7 +695,7 @@ export default function CmDashboardPage() {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-4">
-              {/* Upcoming appointments – REAL DATA from upcomingVisits */}
+              {/* Upcoming appointments – REAL DATA */}
               <Card className="rounded-2xl p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs">
@@ -629,27 +708,38 @@ export default function CmDashboardPage() {
 
                 {!upcomingVisits.length ? (
                   <p className="text-xs text-slate-500">
-                    No upcoming visits scheduled. Create a future activity with
-                    source &quot;visit&quot; and a future start time to see it
-                    here.
+                    📭 No upcoming visits scheduled. Create a future activity
+                    with source &quot;visit&quot; and a future start time to see
+                    it here.
                   </p>
                 ) : (
                   <ul className="space-y-2 text-sm text-slate-700">
                     {upcomingVisits.map((v) => {
-                      const date = new Date(v.startTime);
-                      const dateStr = date.toLocaleDateString();
-                      const timeStr = date.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
+                      const label = formatDateTimeShort(v.startTime);
+
+                      const handleClick = () => {
+                        if (v.clientId) {
+                          router.push(
+                            `/activities/new?clientId=${v.clientId}&source=visit&startTime=${encodeURIComponent(
+                              v.startTime
+                            )}`
+                          );
+                        } else {
+                          router.push(
+                            `/activities/new?source=visit&startTime=${encodeURIComponent(
+                              v.startTime
+                            )}`
+                          );
+                        }
+                      };
 
                       return (
                         <li
                           key={v.id}
-                          className="rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm"
+                          className="cursor-pointer rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 transition"
+                          onClick={handleClick}
                         >
-                          • {dateStr} · {timeStr} — {v.clientName} (
-                          {v.serviceName})
+                          • {label} — {v.clientName} ({v.serviceName})
                         </li>
                       );
                     })}
@@ -671,10 +761,10 @@ export default function CmDashboardPage() {
 
                   <Button
                     variant="outline"
-  className="text-[11px] text-slate-500 hover:text-slate-700"
-  onClick={openQuickNoteModal}
->
-  + Add note
+                    className="text-[11px] text-slate-500 hover:text-slate-700"
+                    onClick={openQuickNoteModal}
+                  >
+                    + Add note
                   </Button>
                 </div>
 
@@ -684,18 +774,15 @@ export default function CmDashboardPage() {
                   </p>
                 ) : !latestNotes.length ? (
                   <p className="text-xs text-slate-500">
-                    No notes yet. Use &quot;Add Client Note&quot; to capture
+                    📝 No notes yet. Use &quot;Add Client Note&quot; to capture
                     quick context from calls and visits.
                   </p>
                 ) : (
                   <ul className="space-y-2 text-sm text-slate-700">
                     {latestNotes.map((note) => {
                       const date = new Date(note.createdAt);
-                      const dateStr = date.toLocaleDateString();
-                      const timeStr = date.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
+                      const dateStr = formatDateTimeShort(note.createdAt);
+
                       return (
                         <li
                           key={note.id}
@@ -713,7 +800,7 @@ export default function CmDashboardPage() {
                               {note.clientName}
                             </span>
                             <span className="text-[10px] text-slate-500">
-                              {dateStr} · {timeStr}
+                              {dateStr}
                             </span>
                           </div>
                           <p className="line-clamp-2 text-[11px] text-slate-600">
