@@ -1,14 +1,41 @@
-import { ReactNode } from "react";
+import * as React from "react";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+type CardProps = {
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+  description?: string;
+};
+
+export function Card({
+  children,
+  className = "",
+  title,
+  description,
+}: CardProps) {
   return (
-    <div
+    <section
       className={`
-        rounded-2xl bg-ef-surface border border-ef-border shadow-soft p-5
+        rounded-2xl bg-ef-surface border border-ef-border shadow-soft
         ${className}
       `}
     >
+      {(title || description) && (
+        <header className="mb-2">
+          {title && (
+            <h2 className="text-sm font-semibold text-slate-900">
+              {title}
+            </h2>
+          )}
+          {description && (
+            <p className="mt-1 text-xs text-slate-500">
+              {description}
+            </p>
+          )}
+        </header>
+      )}
+
       {children}
-    </div>
+    </section>
   );
 }
