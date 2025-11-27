@@ -17,11 +17,12 @@ export function Card({
     <section
       className={`
         rounded-2xl bg-ef-surface border border-ef-border shadow-soft
+        p-4 md:p-5
         ${className}
       `}
     >
       {(title || description) && (
-        <header className="mb-2">
+        <header className="mb-2 md:mb-3">
           {title && (
             <h2 className="text-sm font-semibold text-slate-900">
               {title}
