@@ -548,12 +548,12 @@ export default function CmDashboardPage() {
                     logged activities.
                   </p>
                   <Button
-                    size="sm"
-                    className="text-[11px] md:hidden"
-                    onClick={() => router.push("/activities")}
-                  >
-                    View activity
-                  </Button>
+  className="text-[11px] md:hidden px-3 py-1.5"
+  onClick={() => router.push("/activities")}
+>
+  View activity
+</Button>
+
                 </div>
               </Card>
 
