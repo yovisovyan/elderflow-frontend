@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Base typography + background */
+  --ef-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --ef-bg: #f8fafc;
+  --ef-surface: #ffffff;
+  --ef-border: #e2e8f0;
+  --ef-muted: #64748b;
+
+  /* Brand colors */
+  --ef-primary: #2563eb;
+  --ef-primary-soft: #dbeafe;
+  --ef-primary-strong: #1d4ed8;
+  --ef-danger: #ef4444;
+  --ef-danger-soft: #fee2e2;
+  --ef-success: #16a34a;
+  --ef-success-soft: #dcfce7;
+
+  /* Radius */
+  --ef-radius-lg: 0.75rem;
+  --ef-radius-xl: 1rem;
+}
+
+body {
+  background-color: var(--ef-bg);
+  color: #0f172a;
+  font-family: var(--ef-font-sans);
+}
+
+/* A basic card utility (optional) */
+.ef-card {
+  @apply rounded-xl border border-ef-border bg-ef-surface shadow-soft;
+}
+
 
 :root {
   --background: #ffffff;
