@@ -53,58 +53,47 @@ export default function NewClientPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-  // Load care managers for primaryCM selection
-useEffect(() => {
-  const token = sessionStorage.getItem("token");
-  if (!token) return;
+  // Fetch care managers
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    if (!token) return;
 
-  async function loadCareManagers() {
-    try {
-      setCmLoading(true);
-      setCmError(null);
+    async function loadCMs() {
+      try {
+        setCmLoading(true);
 
-      const res = await fetch(
-        `${API_BASE_URL}/api/users?role=care_manager`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await fetch(`${API_BASE_URL}/api/users?role=care_manager`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setCmError(data.error || "Failed to load care managers.");
+          setCmLoading(false);
+          return;
         }
-      );
 
-      const data = await res.json();
+        const users: any[] = Array.isArray(data.users) ? data.users : [];
 
-      if (!res.ok) {
-        console.error("Error fetching care managers:", data);
-        setCmError(data.error || "Failed to load care managers.");
+        setCareManagers(
+          users.map((u) => ({
+            id: u.id,
+            name: u.name ?? u.email ?? "Care Manager",
+            email: u.email,
+          }))
+        );
+
         setCmLoading(false);
-        return;
+      } catch (err) {
+        setCmError("Unable to load care managers.");
+        setCmLoading(false);
       }
-
-      // FIX: extract the array from { users: [...] }
-      const users: any[] = Array.isArray(data.users) ? data.users : [];
-
-const list: CareManager[] = users.map((u: any) => ({
-  id: u.id,
-  name: u.name ?? u.email ?? "Care Manager",
-  email: u.email ?? null,
-}));
-
-
-      setCareManagers(list);
-      setCmLoading(false);
-    } catch (err: any) {
-      console.error("CM load error", err);
-      setCmError("Could not load care managers.");
-      setCmLoading(false);
     }
-  }
 
-  loadCareManagers();
-}, []);
+    loadCMs();
+  }, []);
 
-
-  function handleChange<K extends keyof NewClientForm>(
+  function updateField<K extends keyof NewClientForm>(
     field: K,
     value: NewClientForm[K]
   ) {
@@ -118,7 +107,7 @@ const list: CareManager[] = users.map((u: any) => ({
 
     const token = sessionStorage.getItem("token");
     if (!token) {
-      setSaveError("You are not logged in. Please log in again.");
+      setSaveError("You are not logged in.");
       return;
     }
 
@@ -129,7 +118,6 @@ const list: CareManager[] = users.map((u: any) => ({
 
     try {
       setSaving(true);
-      
 
       const res = await fetch(`${API_BASE_URL}/api/clients`, {
         method: "POST",
@@ -149,216 +137,186 @@ const list: CareManager[] = users.map((u: any) => ({
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
       if (!res.ok) {
-        console.error("Error creating client:", data);
-        setSaveError(
-          data.error || "Failed to create client. Please try again."
-        );
+        setSaveError(data.error || "Failed to create client.");
         setSaving(false);
         return;
       }
 
-      setSaveMessage("Client created successfully.");
-      setSaving(false);
+      setSaveMessage("Client created 🎉");
 
-      // Small delay then go back to clients list
-      setTimeout(() => {
-        router.push("/clients");
-      }, 800);
-    } catch (err: any) {
-      console.error("Client create error", err);
-      setSaveError(
-        err.message || "Something went wrong creating the client."
-      );
+      setTimeout(() => router.push("/clients"), 500);
+    } catch (err) {
+      setSaveError("Unexpected error.");
+    } finally {
       setSaving(false);
     }
   }
 
   return (
     <ProtectedLayout>
-      <div className="mx-auto flex max-w-3xl flex-col space-y-6 px-4 py-6 lg:px-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              New Client
-            </h1>
-            <p className="text-sm text-slate-500">
-              Create a new client profile and set billing contact details.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push("/clients")}
-            className="text-xs font-medium text-slate-600 hover:text-slate-800"
-          >
-            ← Back to Clients
-          </button>
+      <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+
+        {/* 🌈 POP HEADER, compact */}
+        <div className="
+          rounded-2xl 
+          bg-gradient-to-br from-ef-primary via-ef-primary to-ef-primary-strong 
+          p-6 shadow-medium text-white
+          border border-white/20
+          backdrop-blur-xl 
+        ">
+          <h1 className="text-3xl font-bold tracking-tight drop-shadow">
+            Add New Client
+          </h1>
+          <p className="text-sm opacity-90 mt-1">
+            Create a client profile and assign a care manager.
+          </p>
         </div>
 
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Basic info */}
-            <div className="grid gap-4 md:grid-cols-2">
+        {/* MAIN card — tighter spacing */}
+        <div
+          className="
+          rounded-2xl bg-white/80 backdrop-blur-sm 
+          shadow-medium border border-ef-border 
+          p-6 space-y-8
+        "
+        >
+          {/* SECTION: Client Info */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Client Information
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
               <FormField label="Client name" required>
                 <Input
+                  placeholder="Jane Doe"
                   value={form.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  placeholder="e.g. Jane Doe"
+                  onChange={(e) => updateField("name", e.target.value)}
                 />
               </FormField>
 
-              <FormField
-                label="Date of birth"
-                description="Used for age context in care planning."
-              >
+              <FormField label="Date of birth">
                 <Input
                   type="date"
                   value={form.dob}
-                  onChange={(e) => handleChange("dob", e.target.value)}
+                  onChange={(e) => updateField("dob", e.target.value)}
                 />
               </FormField>
             </div>
 
-            <FormField
-              label="Address"
-              description="Home address or primary location for visits."
-            >
+            <FormField label="Address">
               <Textarea
-                value={form.address}
-                onChange={(e) => handleChange("address", e.target.value)}
-                placeholder="Street, City, State, ZIP"
                 rows={3}
+                placeholder="Street, City, State, ZIP"
+                value={form.address}
+                onChange={(e) => updateField("address", e.target.value)}
+              />
+            </FormField>
+          </section>
+
+          {/* SECTION: Billing */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Billing Contact
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <FormField label="Billing contact name" required>
+                <Input
+                  value={form.billingContactName}
+                  onChange={(e) =>
+                    updateField("billingContactName", e.target.value)
+                  }
+                />
+              </FormField>
+
+              <FormField label="Billing email" required>
+                <Input
+                  type="email"
+                  value={form.billingContactEmail}
+                  onChange={(e) =>
+                    updateField("billingContactEmail", e.target.value)
+                  }
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Billing phone">
+              <Input
+                value={form.billingContactPhone}
+                onChange={(e) =>
+                  updateField("billingContactPhone", e.target.value)
+                }
               />
             </FormField>
 
-            {/* Billing contact */}
-            <div className="rounded-xl border border-ef-border bg-ef-surface p-4">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Billing contact
-              </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Who receives invoices, statements, and billing communication.
-              </p>
+            <FormField label="Client status">
+              <Select
+                value={form.status}
+                onChange={(e) => updateField("status", e.target.value)}
+              >
+                <option value="active">Active</option>
+                <option value="on_hold">On hold</option>
+                <option value="closed">Closed</option>
+              </Select>
+            </FormField>
+          </section>
 
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <FormField label="Billing contact name" required>
-                  <Input
-                    value={form.billingContactName}
-                    onChange={(e) =>
-                      handleChange("billingContactName", e.target.value)
-                    }
-                    placeholder="e.g. Daughter, Family POA"
-                  />
-                </FormField>
+          {/* SECTION: Care Manager */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Care Manager Assignment
+            </h2>
 
-                <FormField label="Billing contact email" required>
-                  <Input
-                    type="email"
-                    value={form.billingContactEmail}
-                    onChange={(e) =>
-                      handleChange("billingContactEmail", e.target.value)
-                    }
-                    placeholder="name@example.com"
-                  />
-                </FormField>
-              </div>
+            <FormField
+              label="Primary care manager"
+              description={
+                cmError
+                  ? cmError
+                  : cmLoading
+                  ? "Loading…"
+                  : "Optional but recommended"
+              }
+            >
+              <Select
+                disabled={cmLoading || careManagers.length === 0}
+                value={form.primaryCMId}
+                onChange={(e) => updateField("primaryCMId", e.target.value)}
+              >
+                <option value="">(No primary CM yet)</option>
+                {careManagers.map((cm) => (
+                  <option key={cm.id} value={cm.id}>
+                    {cm.name} {cm.email && `– ${cm.email}`}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </section>
 
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <FormField label="Billing contact phone">
-                  <Input
-                    value={form.billingContactPhone}
-                    onChange={(e) =>
-                      handleChange("billingContactPhone", e.target.value)
-                    }
-                    placeholder="Optional – phone number"
-                  />
-                </FormField>
-
-                <FormField label="Client status">
-                  <Select
-                    value={form.status}
-                    onChange={(e) => handleChange("status", e.target.value)}
-                  >
-                    <option value="active">Active</option>
-                    <option value="on_hold">On hold</option>
-                    <option value="closed">Closed</option>
-                  </Select>
-                </FormField>
-              </div>
+          {/* Footer */}
+          <div className="flex justify-between items-center pt-2">
+            <div className="text-xs min-h-[20px]">
+              {saveError && <span className="text-red-600">{saveError}</span>}
+              {saveMessage && (
+                <span className="text-emerald-700">{saveMessage}</span>
+              )}
             </div>
 
-            {/* Care manager assignment */}
-            <div className="rounded-xl border border-ef-border bg-ef-surface p-4">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Care manager assignment
-              </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Assign a primary Care Manager responsible for this client. You
-                can update this later.
-              </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => router.push("/clients")}>
+                Cancel
+              </Button>
 
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="Primary care manager"
-                  description={
-                    cmError
-                      ? cmError
-                      : cmLoading
-                      ? "Loading care managers…"
-                      : careManagers.length === 0
-                      ? "No care managers found. You can assign later."
-                      : "Optional but recommended."
-                  }
-                >
-                  <Select
-                    disabled={cmLoading || careManagers.length === 0}
-                    value={form.primaryCMId}
-                    onChange={(e) =>
-                      handleChange("primaryCMId", e.target.value)
-                    }
-                  >
-                    <option value="">(No primary CM yet)</option>
-                    {careManagers.map((cm) => (
-                      <option key={cm.id} value={cm.id}>
-                        {cm.name}
-                        {cm.email ? ` – ${cm.email}` : ""}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
+              <Button disabled={saving}>
+                {saving ? "Saving…" : "Create client"}
+              </Button>
             </div>
+          </div>
 
-            {/* Save actions */}
-            <div className="flex items-center justify-between gap-2 pt-2">
-              <div className="text-xs text-slate-500">
-                {saveError && (
-                  <span className="text-red-600">{saveError}</span>
-                )}
-                {!saveError && saveMessage && (
-                  <span className="text-emerald-700">{saveMessage}</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/clients")}
-                  className="rounded-md border border-ef-border px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <Button type="submit" className="text-xs" disabled={saving}>
-                  {saving ? "Saving…" : "Create client"}
-                </Button>
-              </div>
-            </div>
-          </form>
-        </Card>
+        </div>
       </div>
     </ProtectedLayout>
   );
