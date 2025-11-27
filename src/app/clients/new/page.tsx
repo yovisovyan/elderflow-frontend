@@ -82,13 +82,14 @@ useEffect(() => {
       }
 
       // FIX: extract the array from { users: [...] }
-      const users = Array.isArray(data.users) ? data.users : [];
+      const users: any[] = Array.isArray(data.users) ? data.users : [];
 
-      const list: CareManager[] = users.map((u) => ({
-        id: u.id,
-        name: u.name ?? u.email ?? "Care Manager",
-        email: u.email ?? null,
-      }));
+const list: CareManager[] = users.map((u: any) => ({
+  id: u.id,
+  name: u.name ?? u.email ?? "Care Manager",
+  email: u.email ?? null,
+}));
+
 
       setCareManagers(list);
       setCmLoading(false);
