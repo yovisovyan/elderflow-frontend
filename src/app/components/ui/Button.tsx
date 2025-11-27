@@ -10,7 +10,7 @@ export function Button({ variant = "primary", className = "", ...props }: Button
 
   const styles =
     variant === "primary"
-      ? "bg-ef-primary text-white hover:bg-ef-primary-strong shadow-soft"
+      ? "bg-ef-primary text-blue hover:bg-ef-primary-strong shadow-soft"
       : "border border-ef-border bg-white text-slate-700 hover:bg-slate-50";
 
   return (
