@@ -33,6 +33,13 @@ type ClientInfo = {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
+
+  // NEW: care manager info from backend
+  primaryCMId?: string | null;
+  primaryCM?: {
+    id: string;
+    name: string | null;
+  } | null;
 };
 
 type Invoice = {
@@ -44,8 +51,12 @@ type Invoice = {
   periodEnd: string | null;
   items: InvoiceItem[];
   payments: Payment[];
+
   paidAmount?: number;
   balanceRemaining?: number;
+
+  totalPaid?: number;
+  balance?: number;
 };
 
 function getClientName(client?: ClientInfo) {
@@ -54,6 +65,7 @@ function getClientName(client?: ClientInfo) {
   const parts = [client.firstName, client.lastName].filter(Boolean);
   return parts.length ? parts.join(" ") : "Unnamed client";
 }
+
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
@@ -68,7 +80,6 @@ export default function InvoiceDetailPage() {
 
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("Check");
-  const [paymentReference, setPaymentReference] = useState<string>(""); // NEW
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
@@ -105,6 +116,10 @@ export default function InvoiceDetailPage() {
         }
 
         const inv = data as Invoice;
+
+        // Normalize payments to always be an array
+        inv.payments = inv.payments || [];
+
         setInvoice(inv);
         // pre-fill email with client email if present
         setEmailTo(inv.client?.email ?? "");
@@ -195,7 +210,7 @@ export default function InvoiceDetailPage() {
           body: JSON.stringify({
             amount: amountNumber,
             method: paymentMethod,
-            reference: paymentReference.trim(), // NEW
+            // reference: you can add a `paymentReference` state and send it here later
           }),
         }
       );
@@ -209,10 +224,11 @@ export default function InvoiceDetailPage() {
       }
 
       const updatedInvoice: Invoice = data.invoice;
+      updatedInvoice.payments = updatedInvoice.payments || [];
+
       setInvoice(updatedInvoice);
       setPaymentMessage("Payment recorded successfully.");
       setPaymentAmount("");
-      setPaymentReference(""); // NEW reset
       setPaymentSaving(false);
     } catch (err) {
       console.error("Error adding payment", err);
@@ -280,8 +296,9 @@ export default function InvoiceDetailPage() {
     try {
       setEmailSending(true);
 
+      // NOTE: endpoint path is still /flipss as in your original code
       const res = await fetch(
-        `${API_BASE_URL}/api/invoices/${invoice.id}/email`,
+        `${API_BASE_URL}/api/invoices/${invoice.id}/flipss`,
         {
           method: "POST",
           headers: {
@@ -313,47 +330,19 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  async function handleDownloadPdf() {
-    if (!invoice) return;
+  // Safely compute paid + balance using new + old fields
+  const totalAmount = invoice?.totalAmount ?? 0;
+  const paidAmount =
+    invoice?.paidAmount ??
+    invoice?.totalPaid ??
+    invoice?.payments?.reduce((sum, p) => sum + (p.amount || 0), 0) ??
+    0;
 
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      alert("You are not logged in. Please log in again.");
-      return;
-    }
+  const balanceRemaining =
+    invoice?.balanceRemaining ??
+    invoice?.balance ??
+    totalAmount - paidAmount;
 
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/invoices/${invoice.id}/pdf`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!res.ok) {
-        console.error("Failed to download PDF", res.status);
-        alert("Failed to download invoice PDF.");
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoice.id}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF download error:", err);
-      alert("Something went wrong while downloading the PDF.");
-    }
-  }
-
-  const paidAmount = invoice?.paidAmount ?? 0;
-  const balanceRemaining = invoice?.balanceRemaining ?? 0;
   const statusLower = (invoice?.status ?? "draft")
     .toString()
     .toLowerCase() as InvoiceStatus;
@@ -416,71 +405,45 @@ export default function InvoiceDetailPage() {
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Total</dt>
                     <dd className="text-slate-900">
-                      ${invoice.totalAmount.toFixed(2)}
+                      ${totalAmount.toFixed(2)}
                     </dd>
                   </div>
                 </dl>
-                <div className="mt-4 space-y-2">
-                  <button
-                    type="button"
-                    className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
-                    disabled={
-                      statusSaving ||
-                      statusLower === "sent" ||
-                      statusLower === "paid"
-                    }
-                    onClick={handleApproveInvoice}
-                  >
-                    {statusSaving
-                      ? "Approving..."
-                      : statusLower === "paid"
-                      ? "Invoice paid"
-                      : statusLower === "sent"
-                      ? "Invoice already sent"
-                      : "Approve & mark as sent"}
-                  </button>
-                  {statusMessage && (
-                    <p className="text-xs text-slate-600">
-                      {statusMessage}
-                    </p>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Download PDF
-                  </button>
-                </div>
               </div>
 
               {/* Client info */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Client
-                </h2>
-                <dl className="mt-3 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Name</dt>
-                    <dd className="text-slate-900">
-                      {getClientName(invoice.client)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Email</dt>
-                    <dd className="text-slate-900">
-                      {invoice.client?.email || "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-slate-500">Phone</dt>
-                    <dd className="text-slate-900">
-                      {invoice.client?.phone || "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
+  <h2 className="text-sm font-semibold text-slate-900">
+    Client
+  </h2>
+  <dl className="mt-3 space-y-1 text-sm">
+    <div className="flex justify-between">
+      <dt className="text-slate-500">Name</dt>
+      <dd className="text-slate-900">
+        {getClientName(invoice.client)}
+      </dd>
+    </div>
+    <div className="flex justify-between">
+      <dt className="text-slate-500">Email</dt>
+      <dd className="text-slate-900">
+        {invoice.client?.email || "—"}
+      </dd>
+    </div>
+    <div className="flex justify-between">
+      <dt className="text-slate-500">Phone</dt>
+      <dd className="text-slate-900">
+        {invoice.client?.phone || "—"}
+      </dd>
+    </div>
+    <div className="flex justify-between">
+      <dt className="text-slate-500">Care manager</dt>
+      <dd className="text-slate-900">
+        {invoice.client?.primaryCM?.name || "Not assigned"}
+      </dd>
+    </div>
+  </dl>
+</div>
+
 
               {/* Payments summary */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -491,7 +454,7 @@ export default function InvoiceDetailPage() {
                   <div className="flex justify-between">
                     <dt className="text-slate-500">Total amount</dt>
                     <dd className="text-slate-900">
-                      ${invoice.totalAmount.toFixed(2)}
+                      ${totalAmount.toFixed(2)}
                     </dd>
                   </div>
                   <div className="flex justify-between">
@@ -654,7 +617,6 @@ export default function InvoiceDetailPage() {
                       placeholder="e.g. 150.00"
                     />
                   </div>
-
                   <div className="space-y-1">
                     <label className="block text-xs font-medium text-slate-700">
                       Method
@@ -672,20 +634,6 @@ export default function InvoiceDetailPage() {
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-700">
-                      Reference (Check # / Wire Ref / Note)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={paymentReference}
-                      onChange={(e) => setPaymentReference(e.target.value)}
-                      placeholder="e.g. Check #1021 or Wire 12345"
-                    />
-                  </div>
-
                   <div>
                     <button
                       type="submit"
@@ -737,9 +685,9 @@ export default function InvoiceDetailPage() {
                 Email invoice
               </h2>
               <p className="mt-2 text-xs text-slate-600">
-                Send this invoice to the billing contact. We&apos;ve defaulted to the
-                client&apos;s email, but you can change it if you need to send it
-                somewhere else.
+                Send this invoice to the billing contact. We&apos;ve defaulted
+                to the client&apos;s email, but you can change it if you need to
+                send it somewhere else.
               </p>
               <form
                 className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end"
@@ -823,7 +771,9 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
   }
 
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${colorClasses}`}>
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs ${colorClasses}`}
+    >
       {status.toUpperCase()}
     </span>
   );
