@@ -17,7 +17,10 @@ type Activity = {
   id: string;
   startTime: string;
   duration: number; // minutes
+  cm?: { name?: string | null } | null;
 };
+
+
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | string;
 
@@ -84,12 +87,14 @@ export default function DashboardPage() {
         );
 
         setActivities(
-          (activitiesData as any[]).map((a) => ({
-            id: a.id,
-            startTime: a.startTime,
-            duration: a.duration,
-          }))
-        );
+  (activitiesData as any[]).map((a) => ({
+    id: a.id,
+    startTime: a.startTime,
+    duration: a.duration,
+    cm: a.cm ?? null,
+  }))
+);
+
 
         setInvoices(
           (invoicesData as any[]).map((inv) => ({
@@ -455,40 +460,47 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Recent activity */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="mb-2 text-sm font-semibold text-slate-900">
-                    Recent activity (last 30 days)
-                  </p>
-                  {summary.recentActivities.length === 0 ? (
-                    <p className="text-xs text-slate-500">
-                      No activities logged in the last 30 days.
-                    </p>
-                  ) : (
-                    <table className="min-w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          <th className="border-b border-slate-200 px-3 py-2">
-                            Date
-                          </th>
-                          <th className="border-b border-slate-200 px-3 py-2">
-                            Duration
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {summary.recentActivities.slice(0, 5).map((a) => (
-                          <tr key={a.id} className="hover:bg-slate-50">
-                            <td className="border-b border-slate-200 px-3 py-2">
-                              {a.startTime.slice(0, 10)}
-                            </td>
-                            <td className="border-b border-slate-200 px-3 py-2">
-                              {(a.duration / 60).toFixed(2)} hrs
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+  <p className="mb-2 text-sm font-semibold text-slate-900">
+    Recent activity (last 30 days)
+  </p>
+  {summary.recentActivities.length === 0 ? (
+    <p className="text-xs text-slate-500">
+      No activities logged in the last 30 days.
+    </p>
+  ) : (
+    <table className="min-w-full border-collapse text-sm">
+      <thead>
+        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <th className="border-b border-slate-200 px-3 py-2">
+            Date
+          </th>
+          <th className="border-b border-slate-200 px-3 py-2">
+            Care manager
+          </th>
+          <th className="border-b border-slate-200 px-3 py-2">
+            Duration
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {summary.recentActivities.slice(0, 5).map((a) => (
+          <tr key={a.id} className="hover:bg-slate-50">
+            <td className="border-b border-slate-200 px-3 py-2">
+              {a.startTime.slice(0, 10)}
+            </td>
+            <td className="border-b border-slate-200 px-3 py-2">
+              {a.cm?.name || "—"}
+            </td>
+            <td className="border-b border-slate-200 px-3 py-2">
+              {(a.duration / 60).toFixed(2)} hrs
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
+
 
                 {/* Invoice status breakdown */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
