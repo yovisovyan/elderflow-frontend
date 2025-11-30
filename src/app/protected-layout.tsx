@@ -4,8 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+type Role = "admin" | "care_manager";
+
+type CurrentUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+};
+
 type ProtectedLayoutProps = {
   children: React.ReactNode;
+  /**
+   * Optional: restrict this area to a specific role.
+   * "any" = allow both admin and care_manager (default).
+   */
+  requiredRole?: Role | "any";
 };
 
 const baseNavItems = [
@@ -19,38 +33,87 @@ const baseNavItems = [
   { href: "/dashboard/invoices", label: "Invoices" },
 ];
 
-export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
+export default function ProtectedLayout({
+  children,
+  requiredRole = "any",
+}: ProtectedLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
   const [ready, setReady] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
+    // Only runs on client
+    try {
+      const token = window.sessionStorage.getItem("token");
+      const userJson = window.sessionStorage.getItem("user");
 
-    const userJson = sessionStorage.getItem("user");
-    if (userJson) {
-      try {
-        const user = JSON.parse(userJson);
-        setUserName(user.name || user.fullName || user.email || "User");
-        setUserRole(user.role || null);
-      } catch {
-        // ignore parse error
+      if (!token || !userJson) {
+        setAuthError("You are not logged in. Please log in again.");
+        setUser(null);
+        setReady(true);
+        router.replace("/login");
+        return;
       }
-    }
 
-    setReady(true);
-  }, [router]);
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(userJson);
+      } catch (err) {
+        console.error("Error parsing user from sessionStorage:", err);
+        setAuthError("Invalid session. Please log in again.");
+        setUser(null);
+        setReady(true);
+        router.replace("/login");
+        return;
+      }
+
+      const normalizedRole: Role =
+        parsed.role === "admin" ? "admin" : "care_manager";
+
+      const normalizedUser: CurrentUser = {
+        id: parsed.id,
+        name: parsed.name || parsed.fullName || parsed.email || "User",
+        email: parsed.email,
+        role: normalizedRole,
+      };
+
+      // Optional role-gating
+      if (
+        requiredRole !== "any" &&
+        normalizedUser.role !== requiredRole
+      ) {
+        setAuthError("You do not have permission to view this page.");
+        setUser(normalizedUser);
+        setReady(true);
+        // You can adjust this redirect target if you like
+        router.replace(
+          normalizedUser.role === "care_manager" ? "/cm/dashboard" : "/dashboard"
+        );
+        return;
+      }
+
+      setUser(normalizedUser);
+      setAuthError(null);
+      setReady(true);
+    } catch (err) {
+      console.error("Unexpected auth error:", err);
+      setAuthError("Unexpected error reading session.");
+      setUser(null);
+      setReady(true);
+      router.replace("/login");
+    }
+  }, [router, pathname, requiredRole]);
 
   function handleLogout() {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
+    try {
+      window.sessionStorage.removeItem("token");
+      window.sessionStorage.removeItem("user");
+    } catch {
+      // ignore
+    }
     router.replace("/login");
   }
 
@@ -62,8 +125,23 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     );
   }
 
-  const isAdmin = userRole === "admin";
-  const isCareManager = userRole === "care_manager";
+  if (!user) {
+    // We already redirected, but this is a safety UI
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-600">
+        {authError || "You are not logged in."}
+        <button
+          onClick={() => router.replace("/login")}
+          className="mt-3 rounded-md bg-ef-primary px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-ef-primary-strong"
+        >
+          Go to login
+        </button>
+      </div>
+    );
+  }
+
+  const isAdmin = user.role === "admin";
+  const isCareManager = user.role === "care_manager";
 
   // Build nav items dynamically:
   // - Admin: full nav + Team
@@ -73,10 +151,9 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
 
   if (isAdmin) {
     navItems = [
-  ...baseNavItems,
-  { href: "/team", label: "Team" }, // list page
-];
-
+      ...baseNavItems,
+      { href: "/team", label: "Team" }, // list page
+    ];
   } else if (isCareManager) {
     navItems = [
       { href: "/cm/dashboard", label: "My Dashboard" },
@@ -87,6 +164,14 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   } else {
     navItems = baseNavItems;
   }
+
+  // Pretty title for the current path
+  const headerTitle =
+    pathname === "/dashboard"
+      ? "Dashboard"
+      : pathname?.startsWith("/cm/dashboard")
+      ? "My Dashboard"
+      : pathname || "Dashboard";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -138,14 +223,14 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
           {/* Top bar */}
           <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white/80 px-4 shadow-sm backdrop-blur">
             <div className="text-sm font-semibold text-slate-700">
-              {pathname?.replace("/dashboard", "Dashboard") || "Dashboard"}
+              {headerTitle}
             </div>
 
             <div className="flex items-center gap-3 text-sm">
-              {userName && (
+              {user && (
                 <span className="hidden text-slate-600 md:inline">
-                  {userName}
-                  {userRole ? ` (${userRole})` : null}
+                  {user.name}
+                  {user.role ? ` (${user.role})` : null}
                 </span>
               )}
               <button

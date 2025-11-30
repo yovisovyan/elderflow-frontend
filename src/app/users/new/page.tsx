@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import ProtectedLayout from "../../protected-layout";
 
 const API_BASE_URL =
@@ -14,6 +15,27 @@ type ClientOption = {
 };
 
 type Role = "admin" | "care_manager";
+
+// Zod schema for new user / care manager
+const userSchema = z.object({
+  name: z.string().min(1, "Name is required."),
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Email must be a valid email address."),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters long."),
+  role: z.enum(["admin", "care_manager"]),
+  title: z.string().max(100, "Title is too long.").optional(),
+  phone: z.string().max(50, "Phone is too long.").optional(),
+  profileImageUrl: z
+    .string()
+    .url("Profile image URL must be a valid URL.")
+    .optional()
+    .or(z.literal("")),
+  clientIds: z.array(z.string()).optional(),
+});
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -41,6 +63,7 @@ export default function NewUserPage() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Check admin & load clients for assignment
@@ -143,9 +166,10 @@ export default function NewUserPage() {
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setValidationError(null);
     setSuccess(null);
 
     if (!isAdmin) {
@@ -163,11 +187,27 @@ export default function NewUserPage() {
       return;
     }
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError("Name, email, and password are required.");
+    // 1) Zod validation
+    const parsed = userSchema.safeParse({
+      name: name.trim(),
+      email: email.trim(),
+      password: password.trim(),
+      role,
+      title: title.trim() || undefined,
+      phone: phone.trim() || undefined,
+      profileImageUrl: profileImageUrl.trim() || undefined,
+      clientIds: role === "care_manager" ? selectedClientIds : [],
+    });
+
+    if (!parsed.success) {
+      const firstError =
+        parsed.error.errors[0]?.message || "Invalid user data.";
+      setValidationError(firstError);
       return;
     }
 
+    // 2) Prevent duplicate submissions
+    if (saving) return;
     setSaving(true);
 
     try {
@@ -178,15 +218,21 @@ export default function NewUserPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          password: password.trim(),
-          role,
-          title: title.trim() || undefined,
-          phone: phone.trim() || undefined,
-          profileImageUrl: profileImageUrl.trim() || undefined,
+          name: parsed.data.name,
+          email: parsed.data.email,
+          password: parsed.data.password,
+          role: parsed.data.role,
+          title: parsed.data.title,
+          phone: parsed.data.phone,
+          profileImageUrl:
+            parsed.data.profileImageUrl &&
+            parsed.data.profileImageUrl.length > 0
+              ? parsed.data.profileImageUrl
+              : undefined,
           clientIds:
-            role === "care_manager" ? selectedClientIds : undefined,
+            parsed.data.role === "care_manager"
+              ? parsed.data.clientIds || []
+              : undefined,
         }),
       });
 
@@ -267,6 +313,12 @@ export default function NewUserPage() {
             p-6 space-y-4
           "
         >
+          {/* Validation & error messages */}
+          {validationError && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {validationError}
+            </div>
+          )}
           {error && (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}

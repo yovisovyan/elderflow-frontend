@@ -223,7 +223,7 @@ export default function ClientsPage() {
 
           <Button
             onClick={() => (window.location.href = "/clients/new")}
-            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
+            className="bg-white text-slate-800 border border-slate-300 hover:bg-slate-50"
           >
             + New client
           </Button>

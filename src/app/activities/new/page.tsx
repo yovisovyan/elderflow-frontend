@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "../../protected-layout";
 import { Button } from "../../components/ui/Button";
@@ -209,8 +209,9 @@ export default function NewActivityPage({
     c.name.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
 
     const token = sessionStorage.getItem("token");
     if (!token) {
@@ -218,6 +219,7 @@ export default function NewActivityPage({
       return;
     }
 
+    // simple validation
     if (!selectedClientId) {
       setError("Please select a client.");
       return;
@@ -229,15 +231,15 @@ export default function NewActivityPage({
     }
 
     const { startTimeIso, endTimeIso, durationMinutes } = computeTimes();
-    if (!startTimeIso || !endTimeIso) {
-      setError("Invalid date or time.");
+    if (!startTimeIso || !endTimeIso || durationMinutes <= 0) {
+      setError("Invalid date, time, or duration.");
       return;
     }
 
-    try {
-      setSaving(true);
-      setError(null);
+    if (saving) return;
+    setSaving(true);
 
+    try {
       const res = await fetch(`${API_BASE_URL}/api/activities`, {
         method: "POST",
         headers: {
@@ -307,7 +309,7 @@ export default function NewActivityPage({
 
           <Button
             variant="outline"
-            className="text-xs bg-white/95 text-ef-primary hover:bg-white"
+            className="bg-white text-slate-800 border border-slate-300 hover:bg-slate-50"
             onClick={() =>
               clientIdFromQuery
                 ? router.push(`/activities?clientId=${clientIdFromQuery}`)
@@ -322,14 +324,14 @@ export default function NewActivityPage({
         <div
           className="
             rounded-2xl bg-white/80 backdrop-blur-sm
-            shadow-medium border border-ef-border 
+            shadow-medium border border-ef-border
             p-6 space-y-6
           "
         >
           <Card className="border-0 shadow-none p-0">
             <form className="space-y-6" onSubmit={handleSubmit}>
               {error && (
-                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {error}
                 </div>
               )}
@@ -345,9 +347,7 @@ export default function NewActivityPage({
                     Loading clients…
                   </p>
                 ) : clientsError ? (
-                  <p className="text-[11px] text-red-600">
-                    {clientsError}
-                  </p>
+                  <p className="text-[11px] text-red-600">{clientsError}</p>
                 ) : (
                   <div className="space-y-2">
                     <Input
