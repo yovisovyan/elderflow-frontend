@@ -81,6 +81,9 @@ export default function InvoiceDetailPage() {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+
   // Email invoice state
   const [emailTo, setEmailTo] = useState<string>("");
   const [emailSending, setEmailSending] = useState(false);
@@ -233,6 +236,59 @@ export default function InvoiceDetailPage() {
       setPaymentSaving(false);
     }
   }
+
+    async function handleDownloadPdf() {
+    if (!invoice) return;
+
+    const token = window.sessionStorage.getItem("token");
+    if (!token) {
+      alert("You are not logged in. Please log in again.");
+      return;
+    }
+
+    try {
+      setPdfLoading(true);
+
+      const res = await fetch(
+        `${API_BASE_URL}/api/invoices/${invoice.id}/pdf`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("Error downloading invoice PDF:", text);
+        alert("Failed to generate invoice PDF.");
+        setPdfLoading(false);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      const safeClientName = getClientName(invoice.client).replace(
+        /[^a-z0-9_\- ]/gi,
+        "_"
+      );
+      link.href = url;
+      link.download = `invoice-${invoice.id}-${safeClientName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setPdfLoading(false);
+    } catch (err) {
+      console.error("Error downloading invoice PDF", err);
+      alert("Unexpected error while generating the invoice PDF.");
+      setPdfLoading(false);
+    }
+  }
+
 
   async function handleStripeCheckout() {
     if (!invoice) return;
@@ -436,6 +492,8 @@ export default function InvoiceDetailPage() {
                   </dl>
                 </div>
 
+                
+
                 {/* Client info */}
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <h2 className="text-sm font-semibold text-slate-900">
@@ -497,24 +555,36 @@ export default function InvoiceDetailPage() {
                 </div>
               </div>
 
-              {/* Approve button + status msg */}
+                            {/* Approve + Download PDF */}
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs text-slate-500 min-h-[1rem]">
                   {statusMessage}
                 </div>
-                <button
-                  type="button"
-                  disabled={statusSaving || invoice.status === "paid"}
-                  onClick={handleApproveInvoice}
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {invoice.status === "paid"
-                    ? "Invoice paid"
-                    : statusSaving
-                    ? "Approving…"
-                    : "Mark as sent"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={pdfLoading}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    {pdfLoading ? "Generating PDF…" : "Download PDF"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={statusSaving || invoice.status === "paid"}
+                    onClick={handleApproveInvoice}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    {invoice.status === "paid"
+                      ? "Invoice paid"
+                      : statusSaving
+                      ? "Approving…"
+                      : "Mark as sent"}
+                  </button>
+                </div>
               </div>
+
 
               {/* Line items */}
               <div className="rounded-xl border border-slate-200 bg-white shadow-sm">

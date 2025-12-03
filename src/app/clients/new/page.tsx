@@ -30,6 +30,39 @@ type NewClientForm = {
   primaryCMId: string;
 };
 
+// Simple email check (not perfect, just good enough for the form)
+function isValidEmail(value: string) {
+  return value.includes("@") && value.includes(".");
+}
+
+// Our manual validation that replaces Zod
+function validateClientForm(form: NewClientForm): string | null {
+  if (!form.name.trim()) {
+    return "Client name is required.";
+  }
+
+  if (!form.billingContactName.trim()) {
+    return "Billing contact name is required.";
+  }
+
+  const email = form.billingContactEmail.trim();
+  if (!email) {
+    return "Billing email is required.";
+  }
+  if (!isValidEmail(email)) {
+    return "Billing email must be a valid email address.";
+  }
+
+  // Additional logic: if status is "active", require phone
+  if (form.status === "active") {
+    if (!form.billingContactPhone.trim()) {
+      return "To mark a client as Active, a primary contact phone is required.";
+    }
+  }
+
+  return null;
+}
+
 export default function NewClientPage() {
   const router = useRouter();
 
@@ -113,17 +146,10 @@ export default function NewClientPage() {
       return;
     }
 
-    // SUPER SIMPLE VALIDATION
-    if (!form.name.trim()) {
-      setSaveError("Client name is required.");
-      return;
-    }
-    if (!form.billingContactName.trim()) {
-      setSaveError("Billing contact name is required.");
-      return;
-    }
-    if (!form.billingContactEmail.trim()) {
-      setSaveError("Billing email is required.");
+    // Run our manual validation
+    const errorMessage = validateClientForm(form);
+    if (errorMessage) {
+      setSaveError(errorMessage);
       return;
     }
 
@@ -272,7 +298,14 @@ export default function NewClientPage() {
                 </FormField>
               </div>
 
-              <FormField label="Billing phone">
+              <FormField
+                label="Billing phone"
+                description={
+                  form.status === "active"
+                    ? "Required for Active clients."
+                    : "Optional."
+                }
+              >
                 <Input
                   value={form.billingContactPhone}
                   onChange={(e) =>
