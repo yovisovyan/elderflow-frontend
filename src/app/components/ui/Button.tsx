@@ -29,8 +29,6 @@ export function Button({ variant = "primary", className = "", ...props }: Button
       `
       : `
         border border-ef-border bg-white text-slate-700 hover:bg-slate-50
-        dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700
-        dark:hover:bg-slate-800
       `;
 
   return (

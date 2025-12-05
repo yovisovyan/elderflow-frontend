@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "../protected-layout";
+import { Button } from "../components/ui/Button"; // ✅ NEW
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -19,8 +20,6 @@ type Activity = {
   duration: number; // minutes
   cm?: { name?: string | null } | null;
 };
-
-
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | string;
 
@@ -87,14 +86,13 @@ export default function DashboardPage() {
         );
 
         setActivities(
-  (activitiesData as any[]).map((a) => ({
-    id: a.id,
-    startTime: a.startTime,
-    duration: a.duration,
-    cm: a.cm ?? null,
-  }))
-);
-
+          (activitiesData as any[]).map((a) => ({
+            id: a.id,
+            startTime: a.startTime,
+            duration: a.duration,
+            cm: a.cm ?? null,
+          }))
+        );
 
         setInvoices(
           (invoicesData as any[]).map((inv) => ({
@@ -192,7 +190,7 @@ export default function DashboardPage() {
 
   return (
     <ProtectedLayout>
-          <div className="min-h-[calc(100vh-56px)] bg-ef-bg">
+      <div className="min-h-[calc(100vh-56px)] bg-ef-bg">
         <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
           {/* 🌈 ADMIN HERO – BIG, DISTINCT, STANDOUT */}
           <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-ef-primary-strong to-sky-500 p-8 text-white shadow-2xl">
@@ -403,7 +401,7 @@ export default function DashboardPage() {
                     <p className="mb-2 text-sm font-semibold text-slate-900">
                       Quick admin actions
                     </p>
-                    <div className="flex flex-col gap-2 text-xs">
+                    <div className="flex flex-col gap-2 text-xs bg-white rounded-lg p-2">
                       <QuickAction
                         label="+ New client"
                         description="Create a new client profile"
@@ -460,47 +458,46 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Recent activity */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-  <p className="mb-2 text-sm font-semibold text-slate-900">
-    Recent activity (last 30 days)
-  </p>
-  {summary.recentActivities.length === 0 ? (
-    <p className="text-xs text-slate-500">
-      No activities logged in the last 30 days.
-    </p>
-  ) : (
-    <table className="min-w-full border-collapse text-sm">
-      <thead>
-        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <th className="border-b border-slate-200 px-3 py-2">
-            Date
-          </th>
-          <th className="border-b border-slate-200 px-3 py-2">
-            Care manager
-          </th>
-          <th className="border-b border-slate-200 px-3 py-2">
-            Duration
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {summary.recentActivities.slice(0, 5).map((a) => (
-          <tr key={a.id} className="hover:bg-slate-50">
-            <td className="border-b border-slate-200 px-3 py-2">
-              {a.startTime.slice(0, 10)}
-            </td>
-            <td className="border-b border-slate-200 px-3 py-2">
-              {a.cm?.name || "—"}
-            </td>
-            <td className="border-b border-slate-200 px-3 py-2">
-              {(a.duration / 60).toFixed(2)} hrs
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )}
-</div>
-
+                  <p className="mb-2 text-sm font-semibold text-slate-900">
+                    Recent activity (last 30 days)
+                  </p>
+                  {summary.recentActivities.length === 0 ? (
+                    <p className="text-xs text-slate-500">
+                      No activities logged in the last 30 days.
+                    </p>
+                  ) : (
+                    <table className="min-w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <th className="border-b border-slate-200 px-3 py-2">
+                            Date
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2">
+                            Care manager
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2">
+                            Duration
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.recentActivities.slice(0, 5).map((a) => (
+                          <tr key={a.id} className="hover:bg-slate-50">
+                            <td className="border-b border-slate-200 px-3 py-2">
+                              {a.startTime.slice(0, 10)}
+                            </td>
+                            <td className="border-b border-slate-200 px-3 py-2">
+                              {a.cm?.name || "—"}
+                            </td>
+                            <td className="border-b border-slate-200 px-3 py-2">
+                              {(a.duration / 60).toFixed(2)} hrs
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
 
                 {/* Invoice status breakdown */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -573,17 +570,15 @@ function HeroAction({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
-      className="
-        inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 
-        text-xs font-medium text-ef-primary shadow-sm hover:bg-white
-      "
+      variant="outlineWhite"
+      className="inline-flex items-center gap-2 text-xs"
     >
       <span>{emoji}</span>
       <span>{label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -652,12 +647,13 @@ function QuickAction({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100"
+      variant="outline"
+      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 text-left w-full"
     >
-      <span className="flex flex-col text-left">
+      <span className="flex flex-col">
         <span className="text-xs font-semibold text-slate-800">
           {label}
         </span>
@@ -668,7 +664,7 @@ function QuickAction({
         )}
       </span>
       <span className="text-slate-400">→</span>
-    </button>
+    </Button>
   );
 }
 

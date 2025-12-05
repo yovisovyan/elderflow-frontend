@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  ClipboardList,
+  FileText,
+  BarChart3,
+  ShieldCheck,
+  Settings,
+  UsersRound,
+  Menu,
+  X,
+} from "lucide-react";
 
 type Role = "admin" | "care_manager";
 
@@ -22,15 +34,21 @@ type ProtectedLayoutProps = {
   requiredRole?: Role | "any";
 };
 
-const baseNavItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/clients", label: "Clients" },
-  { href: "/activities", label: "Activities" },
-  { href: "/billing", label: "Billing" },
-  { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
-  // invoices really lives under /dashboard/invoices in your app
-  { href: "/dashboard/invoices", label: "Invoices" },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+};
+
+const baseNavItems: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/clients", label: "Clients", icon: Users },
+  { href: "/activities", label: "Activities", icon: ClipboardList },
+  { href: "/billing", label: "Billing", icon: FileText },
+  { href: "/invoices", label: "Invoices", icon: FileText },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/audit", label: "Audit log", icon: ShieldCheck },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function ProtectedLayout({
@@ -43,9 +61,9 @@ export default function ProtectedLayout({
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
-    // Only runs on client
     try {
       const token = window.sessionStorage.getItem("token");
       const userJson = window.sessionStorage.getItem("user");
@@ -80,7 +98,6 @@ export default function ProtectedLayout({
         role: normalizedRole,
       };
 
-      // Optional role-gating
       if (
         requiredRole !== "any" &&
         normalizedUser.role !== requiredRole
@@ -88,7 +105,6 @@ export default function ProtectedLayout({
         setAuthError("You do not have permission to view this page.");
         setUser(normalizedUser);
         setReady(true);
-        // You can adjust this redirect target if you like
         router.replace(
           normalizedUser.role === "care_manager" ? "/cm/dashboard" : "/dashboard"
         );
@@ -126,7 +142,6 @@ export default function ProtectedLayout({
   }
 
   if (!user) {
-    // We already redirected, but this is a safety UI
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-600">
         {authError || "You are not logged in."}
@@ -143,29 +158,28 @@ export default function ProtectedLayout({
   const isAdmin = user.role === "admin";
   const isCareManager = user.role === "care_manager";
 
-  // Build nav items dynamically:
-  // - Admin: full nav + Team
-  // - Care manager: My Dashboard + core work pages
-  // - Fallback: base nav
-  let navItems: { href: string; label: string }[];
+  let navItems: NavItem[];
 
   if (isAdmin) {
     navItems = [
       ...baseNavItems,
-      { href: "/team", label: "Team" }, // list page
+      { href: "/team", label: "Team", icon: UsersRound },
     ];
   } else if (isCareManager) {
     navItems = [
-      { href: "/cm/dashboard", label: "My Dashboard" },
-      { href: "/clients", label: "Clients" },
-      { href: "/activities", label: "Activities" },
-      { href: "/billing", label: "Billing" },
+      { href: "/cm/dashboard", label: "My Dashboard", icon: LayoutDashboard },
+      { href: "/clients", label: "Clients", icon: Users },
+      { href: "/activities", label: "Activities", icon: ClipboardList },
+      { href: "/billing", label: "Billing", icon: FileText },
     ];
   } else {
     navItems = baseNavItems;
   }
 
-  // Pretty title for the current path
+  // For grouping later (desktop + mobile)
+  const mainNavItems = navItems; // if you later want Settings separated, you can split here
+  const secondaryNavItems: NavItem[] = []; // placeholder for future "Settings" section
+
   const headerTitle =
     pathname === "/dashboard"
       ? "Dashboard"
@@ -176,44 +190,195 @@ export default function ProtectedLayout({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex min-h-screen">
-        {/* Sidebar – always visible on desktop */}
-        <aside className="w-64 border-r border-slate-200 bg-white/90 backdrop-blur flex flex-col">
+        {/* MOBILE NAV DRAWER */}
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-40 flex md:hidden">
+            {/* Backdrop */}
+            <button
+              className="absolute inset-0 bg-slate-900/40"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close navigation"
+            />
+            {/* Drawer */}
+            <div className="relative z-50 w-72 max-w-full bg-white border-r border-slate-200 flex flex-col">
+              {/* Drawer header */}
+              <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-ef-primary text-xs font-bold uppercase text-white">
+                    EF
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    ElderFlow
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="inline-flex items-center justify-center rounded-md p-2 text-slate-500 hover:bg-slate-100"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <nav className="flex-1 px-4 py-4 overflow-y-auto">
+                <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Navigation
+                </p>
+                <div className="space-y-1.5">
+                  {mainNavItems.map((item) => {
+                    const active =
+                      pathname === item.href ||
+                      (pathname?.startsWith(item.href + "/") ?? false);
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileNavOpen(false)}
+                        className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors ${
+                          active
+                            ? "bg-ef-primary text-white shadow-sm"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition-colors ${
+                            active
+                              ? "border-white/40 bg-white/15 text-white"
+                              : "border-slate-200 bg-slate-50 text-slate-500 group-hover:border-slate-300 group-hover:text-slate-700"
+                          }`}
+                        >
+                          <Icon
+                            className={`h-4 w-4 ${
+                              active ? "text-white" : "text-inherit"
+                            }`}
+                          />
+                        </span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {secondaryNavItems.length > 0 && (
+                  <>
+                    <div className="my-4 h-px bg-slate-200" />
+                    <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      Settings &amp; Help
+                    </p>
+                    <div className="space-y-1.5">
+                      {secondaryNavItems.map((item) => {
+                        const active =
+                          pathname === item.href ||
+                          (pathname?.startsWith(item.href + "/") ?? false);
+                        const Icon = item.icon;
+
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMobileNavOpen(false)}
+                            className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors ${
+                              active
+                                ? "bg-ef-primary text-white shadow-sm"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
+                          >
+                            <span
+                              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition-colors ${
+                                active
+                                  ? "border-white/40 bg-white/15 text-white"
+                                  : "border-slate-200 bg-slate-50 text-slate-500 group-hover:border-slate-300 group-hover:text-slate-700"
+                              }`}
+                            >
+                              <Icon
+                                className={`h-4 w-4 ${
+                                  active ? "text-white" : "text-inherit"
+                                }`}
+                              />
+                            </span>
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </nav>
+
+              <div className="border-t border-slate-200 px-5 py-4 text-[11px] text-slate-500">
+                &copy; {new Date().getFullYear()} ElderFlow
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar – desktop */}
+        <aside className="hidden md:flex w-72 border-r border-slate-200 bg-white flex-col">
           {/* Brand block */}
-          <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-xs font-bold uppercase text-white">
+          <div className="flex h-20 items-center gap-3 border-b border-slate-200 px-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ef-primary text-sm font-bold uppercase text-white shadow-sm">
               EF
             </div>
             <div>
-              <div className="text-sm font-semibold">ElderFlow</div>
-              <div className="text-xs text-slate-500">Billing Console</div>
+              <div className="text-sm font-semibold text-slate-900 tracking-tight">
+                ElderFlow
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Billing Console
+              </div>
             </div>
           </div>
 
-          {/* Navigation links */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
-            {navItems.map((item) => {
-              const active =
-                pathname === item.href ||
-                (pathname?.startsWith(item.href + "/") ?? false);
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-5 overflow-y-auto">
+            <p className="px-3 pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              Navigation
+            </p>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center rounded-md px-3 py-2 text-sm font-medium ${
-                    active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+            <div className="space-y-1.5">
+              {navItems.map((item) => {
+                const active =
+                  pathname === item.href ||
+                  (pathname?.startsWith(item.href + "/") ?? false);
+
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors ${
+                      active
+                        ? "bg-ef-primary text-white shadow-sm"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    {/* Icon chip */}
+                    <span
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition-colors ${
+                        active
+                          ? "border-white/40 bg-white/15 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-500 group-hover:border-slate-300 group-hover:text-slate-700"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 ${
+                          active ? "text-white" : "text-inherit"
+                        }`}
+                      />
+                    </span>
+
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+          <div className="border-t border-slate-200 px-5 py-4 text-[11px] text-slate-500">
             &copy; {new Date().getFullYear()} ElderFlow
           </div>
         </aside>
@@ -222,8 +387,18 @@ export default function ProtectedLayout({
         <div className="flex flex-1 flex-col">
           {/* Top bar */}
           <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white/80 px-4 shadow-sm backdrop-blur">
-            <div className="text-sm font-semibold text-slate-700">
-              {headerTitle}
+            <div className="flex items-center gap-2">
+              {/* Mobile burger */}
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(true)}
+                className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="text-sm font-semibold text-slate-700">
+                {headerTitle}
+              </div>
             </div>
 
             <div className="flex items-center gap-3 text-sm">
