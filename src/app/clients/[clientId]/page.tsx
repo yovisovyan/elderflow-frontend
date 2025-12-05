@@ -3049,51 +3049,6 @@ export default function ClientDetailPage() {
                 )}
               </Card>
 
-              {/* Activities table */}
-              <Card title="Recent Activities (Table View)">
-                {activitiesError && (
-                  <p className="text-xs text-red-600">{activitiesError}</p>
-                )}
-                {!activitiesError && activities.length === 0 && (
-                  <p className="text-xs text-slate-500">
-                    No activities found for this client yet.
-                  </p>
-                )}
-                {!activitiesError && activities.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          <th className="border-b border-slate-200 px-3 py-2">
-                            Date
-                          </th>
-                          <th className="border-b border-slate-200 px-3 py-2">
-                            Hours
-                          </th>
-                          <th className="border-b border-slate-200 px-3 py-2">
-                            Notes
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activities.map((entry: ActivityApi) => (
-                          <tr key={entry.id} className="hover:bg-slate-50">
-                            <td className="border-b border-slate-200 px-3 py-2">
-                              {entry.startTime.slice(0, 10)}
-                            </td>
-                            <td className="border-b border-slate-200 px-3 py-2">
-                              {(entry.duration / 60).toFixed(2)} hrs
-                            </td>
-                            <td className="border-b border-slate-200 px-3 py-2">
-                              {entry.notes || "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
 
               {/* Billing summary */}
               <Card title="Billing Summary">
