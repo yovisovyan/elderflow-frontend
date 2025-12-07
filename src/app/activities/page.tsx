@@ -35,6 +35,15 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Filter states
+  const [clientName, setClientName] = useState("");
+  const [careManager, setCareManager] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // For showing / hiding "Clear filters" button
+  const hasActiveFilters =
+    !!clientIdFilter || !!clientName || !!careManager || !!dateFrom || !!dateTo;
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
@@ -49,9 +58,17 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
         setLoading(true);
         setError(null);
 
-        const url = clientIdFilter
-          ? `${API_BASE_URL}/api/activities?clientId=${clientIdFilter}`
-          : `${API_BASE_URL}/api/activities`;
+        // Build query params for filters
+        const params = new URLSearchParams();
+        if (clientIdFilter) params.append("clientId", clientIdFilter);
+        if (clientName) params.append("clientName", clientName);
+        if (careManager) params.append("careManager", careManager);
+        if (dateFrom) params.append("dateFrom", dateFrom);
+        if (dateTo) params.append("dateTo", dateTo);
+
+        const url = `${API_BASE_URL}/api/activities${
+          params.toString() ? `?${params.toString()}` : ""
+        }`;
 
         const res = await fetch(url, {
           headers: {
@@ -90,7 +107,7 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
     }
 
     fetchActivities();
-  }, [clientIdFilter]);
+  }, [clientIdFilter, clientName, careManager, dateFrom, dateTo]);
 
   const summary = useMemo(() => {
     const totalMinutes = activities.reduce(
@@ -103,6 +120,21 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
       count: activities.length,
     };
   }, [activities]);
+
+  // No in-memory filtering; backend handles filtering
+  const filteredActivities = activities;
+
+  function handleClearFilters() {
+    setClientName("");
+    setCareManager("");
+    setDateFrom("");
+    setDateTo("");
+
+    // Also clear clientId filter from URL if present
+    if (clientIdFilter) {
+      router.push("/activities");
+    }
+  }
 
   return (
     <ProtectedLayout>
@@ -133,7 +165,7 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
                   onClick={() => router.push("/activities")}
                   className="underline font-medium"
                 >
-                  Clear filter
+                  Clear client filter
                 </button>
               </p>
             )}
@@ -155,6 +187,7 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
             p-6 space-y-6
           "
         >
+
           {/* Summary row */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card>
@@ -192,6 +225,78 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
             </Card>
           </div>
 
+           {/* Filters header + Clear button */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Filters
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Narrow down activities by client, care manager, and date range.
+              </p>
+            </div>
+            {hasActiveFilters && (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-xs"
+                onClick={handleClearFilters}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+
+          {/* Filters row */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4 mb-4">
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                Client Name
+              </label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ef-primary-soft focus:border-ef-primary"
+                placeholder="Search client..."
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                Care Manager
+              </label>
+              <input
+                type="text"
+                value={careManager}
+                onChange={(e) => setCareManager(e.target.value)}
+                className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ef-primary-soft focus:border-ef-primary"
+                placeholder="Search care manager..."
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                Date From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ef-primary-soft focus:border-ef-primary"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                Date To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ef-primary-soft focus:border-ef-primary"
+              />
+            </div>
+          </div>
+
           {/* Loading / error */}
           {loading && (
             <p className="text-sm text-slate-500">Loading activities...</p>
@@ -206,9 +311,9 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
           {/* Activities table */}
           {!loading && !error && (
             <Card title="Activities">
-              {activities.length === 0 ? (
+              {filteredActivities.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  No activities found yet.
+                  No activities found for the selected filters.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
@@ -243,7 +348,7 @@ export default function ActivitiesPage({ searchParams }: ActivitiesPageProps) {
                     </thead>
 
                     <tbody>
-                      {activities.map((a) => (
+                      {filteredActivities.map((a) => (
                         <tr key={a.id} className="hover:bg-slate-50">
                           <td className="border-b border-slate-200 px-3 py-2">
                             {a.startTime ? a.startTime.slice(0, 10) : "-"}

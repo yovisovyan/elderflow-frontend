@@ -201,8 +201,15 @@ export default function ClientDetailPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [noteMessage, setNoteMessage] = useState<string | null>(null);
 
+
+  const [deletingClient, setDeletingClient] = useState(false);
+  const [archivingClient, setArchivingClient] = useState(false);
+  const [clientActionMessage, setClientActionMessage] = useState<string | null>(null);
+
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCareManager, setIsCareManager] = useState(false);
+  
 
     // Tabs: overview | care | profile
   type TabKey = "overview" | "care" | "profile";
@@ -1113,6 +1120,102 @@ export default function ClientDetailPage() {
 
     fetchCarePlans();
   }, [clientId]);
+
+
+    // 4.12) Archive client
+  async function handleArchiveClient() {
+  setClientActionMessage(null);
+
+  if (!window.confirm("Archive this client? They will no longer appear as active.")) {
+    return;
+  }
+
+  const token = window.sessionStorage.getItem("token");
+  if (!token) {
+    setClientActionMessage("You are not logged in. Please log in again.");
+    return;
+  }
+
+  try {
+    setArchivingClient(true);
+
+    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/archive`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      console.error("Error archiving client:", data);
+      setClientActionMessage(
+        (data as any).error || "Failed to archive client."
+      );
+      setArchivingClient(false);
+      return;
+    }
+
+    // After archiving, you can either:
+    // - redirect back to clients list
+    // OR
+    // - stay on page and show status = archived
+    // For now: redirect
+    router.push("/clients");
+  } catch (err) {
+    console.error("Unexpected error archiving client:", err);
+    setClientActionMessage("Unexpected error while archiving client.");
+    setArchivingClient(false);
+  }
+}
+
+
+  // 4.13) Delete Handler
+
+  async function handleDeleteClient() {
+  setClientActionMessage(null);
+
+  if (!window.confirm("Delete this client permanently? This cannot be undone.")) {
+    return;
+  }
+
+  const token = window.sessionStorage.getItem("token");
+  if (!token) {
+    setClientActionMessage("You are not logged in. Please log in again.");
+    return;
+  }
+
+  try {
+    setDeletingClient(true);
+
+    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      console.error("Error deleting client:", data);
+      setClientActionMessage(
+        (data as any).error ||
+          "Failed to delete client. If there are unpaid invoices, archive instead."
+      );
+      setDeletingClient(false);
+      return;
+    }
+
+    router.push("/clients");
+  } catch (err) {
+    console.error("Unexpected error deleting client:", err);
+    setClientActionMessage("Unexpected error while deleting client.");
+    setDeletingClient(false);
+  }
+}
+
 
     // Fetch progress notes
   useEffect(() => {
@@ -2903,6 +3006,28 @@ export default function ClientDetailPage() {
                       ? "Generating Face Sheet..."
                       : "Export Emergency Face Sheet (PDF)"}
                   </Button>
+
+                  {isAdmin && (
+    <>
+      <Button
+        variant="outline"
+        className="text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
+        onClick={handleArchiveClient}
+        disabled={archivingClient}
+      >
+        {archivingClient ? "Archiving…" : "Archive client"}
+      </Button>
+
+      <Button
+        variant="outline"
+        className="text-xs text-red-700 border-red-200 hover:bg-red-50"
+        onClick={handleDeleteClient}
+        disabled={deletingClient}
+      >
+        {deletingClient ? "Deleting…" : "Delete client"}
+      </Button>
+    </>
+  )}
                 </div>
               </div>
 
